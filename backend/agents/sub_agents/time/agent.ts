@@ -3,6 +3,8 @@ import { ToolResponse } from "../../../types/agent";
 import { z } from "zod";
 import { config } from "dotenv";
 import { AGENT_MODEL } from "../../../config/agent";
+import { findFromCityStateProvince, lookupViaCity } from "city-timezones";
+import { DateTime } from "luxon";
 // Load environment variables
 config();
 
@@ -18,15 +20,44 @@ const AGENT_INSTRUCTION = 'You are a time agent that can get the current time in
  * @returns The current time in the given location
  */
 export const getCurrentTimeHandler = ({ location }: { location: string }): ToolResponse => {
-    console.log('Getting current time for location:', location);
+    console.log('Resolving current time for location:', location);
+
+    // Try to find the city in the timezone database
+    // Handle formats like "Monterrey, MX" or "Tokyo"
+    const cleanLocation = location.replace(/,.*$/, '').trim();
+    const cityMatches = lookupViaCity(cleanLocation);
+
+    let timezone = cityMatches.length > 0 ? cityMatches[0].timezone : null;
+
+    // Fallback search if the first word didn't work (e.g. "San Francisco")
+    if (!timezone && cleanLocation.includes(' ')) {
+        const firstWord = cleanLocation.split(' ')[0];
+        const firstWordMatches = lookupViaCity(firstWord);
+        if (firstWordMatches.length > 0) {
+            timezone = firstWordMatches[0].timezone;
+        }
+    }
+
+    if (!timezone) {
+        return {
+            status: 'error',
+            message: `Could not resolve timezone for location: ${location}. Please provide a city name.`
+        };
+    }
+
+    // Get current time in that timezone
+    const now = DateTime.now().setZone(timezone);
+
     return {
         status: 'success',
         data: {
-            time: new Date().toLocaleTimeString(),
-            location
+            time: now.toFormat('HH:mm:ss'),
+            location,
+            timezone
         }
     };
 };
+
 
 /**
  * Get the current time tool
