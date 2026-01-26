@@ -2,7 +2,14 @@ import { FunctionTool, LlmAgent } from '@google/adk';
 import { z } from 'zod';
 
 export const getCurrentWeatherHandler = ({ location }: { location: string }) => {
-    return `The current weather in ${location} is sunny.`;
+    return {
+        status: 'success',
+        data: {
+            location,
+            temperature: 22,
+            condition: 'sunny'
+        }
+    };
 };
 
 export const getCurrentWeatherTool = new FunctionTool({
