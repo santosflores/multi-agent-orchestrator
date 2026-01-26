@@ -18,7 +18,13 @@ const AGENT_INSTRUCTION = 'You are a time agent that can get the current time in
  */
 export const getCurrentTimeHandler = ({ location }: { location: string }) => {
     console.log('Getting current time for location:', location);
-    return `The current time in ${location} is ${new Date().toLocaleTimeString()}.`;
+    return {
+        status: 'success',
+        data: {
+            time: new Date().toLocaleTimeString(),
+            location
+        }
+    };
 };
 
 /**
