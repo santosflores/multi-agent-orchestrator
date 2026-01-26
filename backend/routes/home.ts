@@ -35,7 +35,11 @@ export function registerHomeRoute(fastify: FastifyInstance, runner: InMemoryRunn
 
             const stream = Readable.from(streamAgentResponse(result, sessionId, request));
 
-            return reply.send(stream);
+            return reply
+                .header('Content-Type', 'text/event-stream')
+                .header('Cache-Control', 'no-cache')
+                .header('Connection', 'keep-alive')
+                .send(stream);
         } catch (error) {
             reply.status(500).send({ error: 'Internal Server Error' });
         }
