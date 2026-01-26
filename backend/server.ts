@@ -1,16 +1,21 @@
 import Fastify from 'fastify';
 import { config } from 'dotenv';
+import { InMemoryRunner } from '@google/adk';
+
+import { orchestratorAgent } from './agents/agent';
+import { registerHomeRoute } from './routes/home';
 
 config();
+
+const runner = new InMemoryRunner({
+    agent: orchestratorAgent,
+});
 
 const fastify = Fastify({
     logger: true
 });
 
-fastify.get('/', async (request, reply) => {
-    request.log.info('Request received');
-    return { hello: 'world' };
-});
+registerHomeRoute(fastify, runner);
 
 const start = async () => {
     try {
