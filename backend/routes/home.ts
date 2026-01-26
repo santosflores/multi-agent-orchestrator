@@ -4,10 +4,10 @@ import { extractPrompt, runFinishedEvent, runStartedEvent, textMessageContentEve
 import { randomUUID } from "crypto";
 import { ensureSession } from "../services/session";
 import { Readable } from "stream";
-import { stringifyContent, isFinalResponse, Event } from "@google/adk";
+import { stringifyContent, Event } from "@google/adk";
 
 export function registerHomeRoute(fastify: FastifyInstance, runner: InMemoryRunner) {
-    fastify.get('/', async (request, reply) => {
+    fastify.get('/', async (request) => {
         request.log.info('Request received');
         return { hello: 'world' };
     });
