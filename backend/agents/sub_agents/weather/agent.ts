@@ -1,6 +1,12 @@
 import { FunctionTool, LlmAgent } from '@google/adk';
 import { z } from 'zod';
 
+// Agent configuration
+const AGENT_NAME = 'weather';
+const AGENT_DESCRIPTION = 'Current weather agent';
+const AGENT_INSTRUCTION = 'You are a weather agent that can get the current weather in a given location.';
+const AGENT_MODEL = process.env.FLASH_MODEL || 'gemini-3-flash-preview';
+
 export const getCurrentWeatherHandler = ({ location }: { location: string }) => {
     return {
         status: 'success',
@@ -22,9 +28,9 @@ export const getCurrentWeatherTool = new FunctionTool({
 });
 
 export const weatherAgent = new LlmAgent({
-    name: 'weather',
-    model: 'gemini-3-flash-preview',
-    description: 'Weather agent',
-    instruction: 'You are a weather agent that can get the current weather in a given location.',
+    name: AGENT_NAME,
+    model: AGENT_MODEL,
+    description: AGENT_DESCRIPTION,
+    instruction: AGENT_INSTRUCTION,
     tools: [getCurrentWeatherTool]
 });
