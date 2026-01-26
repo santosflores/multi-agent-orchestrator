@@ -27,21 +27,24 @@ export const getCurrentTimeHandler = ({ location }: { location: string }): ToolR
     const cleanLocation = location.replace(/,.*$/, '').trim();
     const cityMatches = lookupViaCity(cleanLocation);
 
-    let timezone = cityMatches.length > 0 ? cityMatches[0].timezone : null;
+    let timezone = cityMatches.length > 0 ? cityMatches.pop()?.timezone : null;
 
     // Fallback search if the first word didn't work (e.g. "San Francisco")
     if (!timezone && cleanLocation.includes(' ')) {
-        const firstWord = cleanLocation.split(' ')[0];
+        const firstWord = cleanLocation.split(' ')[0]!;
         const firstWordMatches = lookupViaCity(firstWord);
         if (firstWordMatches.length > 0) {
-            timezone = firstWordMatches[0].timezone;
+            timezone = firstWordMatches.pop()?.timezone;
         }
     }
 
     if (!timezone) {
         return {
             status: 'error',
-            message: `Could not resolve timezone for location: ${location}. Please provide a city name.`
+            message: `Could not resolve timezone for location: ${location}. Please provide a city name.`,
+            data: {
+                location
+            }
         };
     }
 
