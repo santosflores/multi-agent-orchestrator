@@ -1,4 +1,5 @@
 import { FunctionTool, LlmAgent } from "@google/adk";
+import { ToolResponse } from "../../../types/agent";
 import { z } from "zod";
 import { config } from "dotenv";
 import { AGENT_MODEL } from "../../../config/agent";
@@ -16,7 +17,7 @@ const AGENT_INSTRUCTION = 'You are a time agent that can get the current time in
  * @param location The location to get the time for
  * @returns The current time in the given location
  */
-export const getCurrentTimeHandler = ({ location }: { location: string }) => {
+export const getCurrentTimeHandler = ({ location }: { location: string }): ToolResponse => {
     console.log('Getting current time for location:', location);
     return {
         status: 'success',
