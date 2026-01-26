@@ -102,13 +102,13 @@ describe('server.ts', () => {
     });
 
     describe('server start behavior', () => {
-        it('listens on port 3000', async () => {
+        it('listens on port 8000', async () => {
             await import('./server.js');
 
             // Give the async start() function time to execute
             await new Promise(resolve => setTimeout(resolve, 10));
 
-            expect(mockFastifyInstance.listen).toHaveBeenCalledWith({ port: 3000 });
+            expect(mockFastifyInstance.listen).toHaveBeenCalledWith({ port: 8000 });
         });
 
         it('logs error and exits with code 1 on failure', async () => {
