@@ -1,8 +1,7 @@
 import { InMemoryRunner } from "@google/adk";
 import { FastifyInstance, FastifyRequest } from "fastify";
-import { runFinishedEvent, runStartedEvent, textMessageContentEvent, textMessageEndEvent, textMessageStartEvent } from "../utils/sse-stream/sse-event-builders";
+import { extractPrompt, runFinishedEvent, runStartedEvent, textMessageContentEvent, textMessageEndEvent, textMessageStartEvent } from "../utils";
 import { randomUUID } from "crypto";
-import { extractPrompt } from "../utils/prompt-parsing/extract-prompt";
 import { ensureSession } from "../services/session";
 import { Readable } from "stream";
 import { stringifyContent, isFinalResponse, Event } from "@google/adk";
