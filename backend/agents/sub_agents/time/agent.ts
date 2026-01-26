@@ -1,11 +1,15 @@
 import { FunctionTool, LlmAgent } from "@google/adk";
 import { z } from "zod";
+import { config } from "dotenv";
+import { AGENT_MODEL } from "../../../config/agent";
+// Load environment variables
+config();
 
 // Agent configuration
 const AGENT_NAME = 'currentTime';
 const AGENT_DESCRIPTION = 'Current time agent';
 const AGENT_INSTRUCTION = 'You are a time agent that can get the current time in a given location.';
-const AGENT_MODEL = process.env.FLASH_MODEL || 'gemini-3-flash-preview';
+
 
 /**
  * Get the current time in a given location
@@ -13,6 +17,7 @@ const AGENT_MODEL = process.env.FLASH_MODEL || 'gemini-3-flash-preview';
  * @returns The current time in the given location
  */
 export const getCurrentTimeHandler = ({ location }: { location: string }) => {
+    console.log('Getting current time for location:', location);
     return `The current time in ${location} is ${new Date().toLocaleTimeString()}.`;
 };
 
@@ -25,8 +30,8 @@ export const getCurrentTimeTool = new FunctionTool({
     description: 'Get the current time',
     parameters: z.object({
         location: z.string().describe('The location to get the time for'),
-    }),
-    execute: getCurrentTimeHandler
+    }) as any,
+    execute: getCurrentTimeHandler as any
 });
 
 /**

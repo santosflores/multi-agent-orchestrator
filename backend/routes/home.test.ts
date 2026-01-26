@@ -60,10 +60,15 @@ function createMockRequest(body: Record<string, unknown> = {}): FastifyRequest {
 // Helper to create mock reply
 function createMockReply() {
     const reply = {
+        header: vi.fn().mockReturnThis(),
         send: vi.fn().mockReturnThis(),
         status: vi.fn().mockReturnThis()
     };
-    return reply as unknown as FastifyReply & { send: Mock; status: Mock };
+    return reply as unknown as FastifyReply & {
+        header: Mock;
+        send: Mock;
+        status: Mock
+    };
 }
 
 // Helper for empty async iterable

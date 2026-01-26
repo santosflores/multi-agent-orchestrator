@@ -1,8 +1,11 @@
 import { LlmAgent } from '@google/adk';
 import { weatherAgent } from './sub_agents/weather/agent';
 import { currentTimeAgent } from './sub_agents/time/agent';
+import { config } from 'dotenv';
+import { AGENT_MODEL } from '../config/agent';
 
-const AGENT_MODEL = process.env.AGENT_MODEL || 'gemini-3-flash-preview';
+config();
+
 const AGENT_NAME = 'orchestrator';
 const AGENT_DESCRIPTION = 'Orchestrator agent';
 const AGENT_INSTRUCTION = `You are an orchestrator agent that can delegate tasks to subagents. 

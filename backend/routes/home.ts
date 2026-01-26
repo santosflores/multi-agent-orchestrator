@@ -1,8 +1,7 @@
 import { InMemoryRunner } from "@google/adk";
 import { FastifyInstance, FastifyRequest } from "fastify";
-import { runFinishedEvent, runStartedEvent, textMessageContentEvent, textMessageEndEvent, textMessageStartEvent } from "../utils/sse-stream/sse-event-builders";
+import { extractPrompt, runFinishedEvent, runStartedEvent, textMessageContentEvent, textMessageEndEvent, textMessageStartEvent } from "../utils";
 import { randomUUID } from "crypto";
-import { extractPrompt } from "../utils/prompt-parsing/extract-prompt";
 import { ensureSession } from "../services/session";
 import { Readable } from "stream";
 import { stringifyContent, isFinalResponse, Event } from "@google/adk";
@@ -35,8 +34,13 @@ export function registerHomeRoute(fastify: FastifyInstance, runner: InMemoryRunn
 
             const stream = Readable.from(streamAgentResponse(result, sessionId, request));
 
-            return reply.send(stream);
+            return reply
+                .header('Content-Type', 'text/event-stream')
+                .header('Cache-Control', 'no-cache')
+                .header('Connection', 'keep-alive')
+                .send(stream);
         } catch (error) {
+            request.log.error({ err: error }, 'Failed to process request');
             reply.status(500).send({ error: 'Internal Server Error' });
         }
     });
