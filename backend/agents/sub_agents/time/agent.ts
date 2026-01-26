@@ -1,7 +1,7 @@
 import { FunctionTool, LlmAgent } from "@google/adk";
 import { z } from "zod";
 import { config } from "dotenv";
-
+import { AGENT_MODEL } from "../../../config/agent";
 // Load environment variables
 config();
 

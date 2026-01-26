@@ -2,6 +2,7 @@ import { LlmAgent } from '@google/adk';
 import { weatherAgent } from './sub_agents/weather/agent';
 import { currentTimeAgent } from './sub_agents/time/agent';
 import { config } from 'dotenv';
+import { AGENT_MODEL } from '../config/agent';
 
 config();
 
