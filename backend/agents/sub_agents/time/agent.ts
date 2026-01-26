@@ -17,6 +17,7 @@ const AGENT_MODEL = process.env.FLASH_MODEL || 'gemini-3-flash-preview';
  * @returns The current time in the given location
  */
 export const getCurrentTimeHandler = ({ location }: { location: string }) => {
+    console.log('Getting current time for location:', location);
     return `The current time in ${location} is ${new Date().toLocaleTimeString()}.`;
 };
 
