@@ -7,7 +7,13 @@ const AGENT_NAME = 'weather';
 const AGENT_DESCRIPTION = 'Current weather agent';
 const AGENT_INSTRUCTION = 'You are a weather agent that can get the current weather in a given location.';
 
+/**
+ * Handler for the getCurrentWeather tool
+ * @param location - The location to get the weather for
+ * @returns The current weather in the given location
+ */
 export const getCurrentWeatherHandler = ({ location }: { location: string }) => {
+    console.log('Getting current weather for location:', location);
     return {
         status: 'success',
         data: {
@@ -18,6 +24,10 @@ export const getCurrentWeatherHandler = ({ location }: { location: string }) => 
     };
 };
 
+/**
+ * Get the current weather tool
+ * @returns The current weather tool
+ */
 export const getCurrentWeatherTool = new FunctionTool({
     name: 'getCurrentWeather',
     description: 'Get the current weather',
@@ -27,6 +37,10 @@ export const getCurrentWeatherTool = new FunctionTool({
     execute: getCurrentWeatherHandler
 });
 
+/**
+ * Weather agent
+ * @returns The weather agent
+ */
 export const weatherAgent = new LlmAgent({
     name: AGENT_NAME,
     model: AGENT_MODEL,
