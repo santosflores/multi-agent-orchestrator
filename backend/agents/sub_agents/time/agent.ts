@@ -1,15 +1,12 @@
 import { FunctionTool, LlmAgent } from "@google/adk";
 import { z } from "zod";
-import { config } from "dotenv";
-
-// Load environment variables
-config();
+import { AGENT_MODEL } from "../../config";
 
 // Agent configuration
 const AGENT_NAME = 'currentTime';
 const AGENT_DESCRIPTION = 'Current time agent';
 const AGENT_INSTRUCTION = 'You are a time agent that can get the current time in a given location.';
-const AGENT_MODEL = process.env.FLASH_MODEL || 'gemini-3-flash-preview';
+
 
 /**
  * Get the current time in a given location
