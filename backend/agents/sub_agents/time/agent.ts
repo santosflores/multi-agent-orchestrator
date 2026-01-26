@@ -27,8 +27,8 @@ export const getCurrentTimeTool = new FunctionTool({
     description: 'Get the current time',
     parameters: z.object({
         location: z.string().describe('The location to get the time for'),
-    }),
-    execute: getCurrentTimeHandler
+    }) as any,
+    execute: getCurrentTimeHandler as any
 });
 
 /**

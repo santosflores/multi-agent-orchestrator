@@ -23,8 +23,8 @@ export const getCurrentWeatherTool = new FunctionTool({
     description: 'Get the current weather',
     parameters: z.object({
         location: z.string().describe('The location to get the weather for'),
-    }),
-    execute: getCurrentWeatherHandler
+    }) as any,
+    execute: getCurrentWeatherHandler as any
 });
 
 export const weatherAgent = new LlmAgent({
