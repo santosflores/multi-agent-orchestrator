@@ -62,19 +62,6 @@ async function* streamAgentResponse(
     let fullContent = '';
 
     for await (const event of result) {
-        // Log event structure for debugging
-        request.log.info(
-            {
-                eventAuthor: (event as { author?: string }).author,
-                hasContent: !!(event as { content?: unknown }).content,
-                hasParts: !!(event as { content?: { parts?: unknown[] } }).content?.parts,
-                partsCount: (event as { content?: { parts?: unknown[] } }).content?.parts?.length,
-                isFinal: isFinalResponse(event),
-                partial: (event as { partial?: boolean }).partial
-            },
-            'ADK event received'
-        );
-
         const delta = stringifyContent(event);
         if (delta && delta.length > 0) {
             fullContent += delta;
