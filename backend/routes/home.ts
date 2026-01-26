@@ -24,7 +24,7 @@ export function registerHomeRoute(fastify: FastifyInstance, runner: InMemoryRunn
 
             const { sessionId, userId } = await ensureSession(runner, inputSessionId, inputUserId);
 
-            const result = await runner.runAsync({
+            const result = runner.runAsync({
                 userId,
                 sessionId,
                 newMessage: {
