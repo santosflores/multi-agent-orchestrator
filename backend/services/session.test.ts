@@ -23,16 +23,16 @@ describe('ensureSession', () => {
             expect(result.sessionId).toBe('created-session-id');
         });
 
-        it('uses default userId "test_user" when userId is not provided', async () => {
+        it('uses default userId "anonymous" when userId is not provided', async () => {
             const mockRunner = createMockRunner();
 
             const result = await ensureSession(mockRunner);
 
             expect(mockRunner.sessionService.createSession).toHaveBeenCalledWith({
                 appName: 'test-app',
-                userId: 'test_user'
+                userId: 'anonymous'
             });
-            expect(result.userId).toBe('test_user');
+            expect(result.userId).toBe('anonymous');
         });
 
         it('uses provided userId when creating a new session', async () => {
@@ -54,7 +54,7 @@ describe('ensureSession', () => {
 
             expect(result).toEqual<SessionInfo>({
                 sessionId: 'fresh-session',
-                userId: 'test_user'
+                userId: 'anonymous'
             });
         });
     });
@@ -70,12 +70,12 @@ describe('ensureSession', () => {
             expect(result.sessionId).toBe(existingSessionId);
         });
 
-        it('uses default userId "test_user" when userId is not provided', async () => {
+        it('uses default userId "anonymous" when userId is not provided', async () => {
             const mockRunner = createMockRunner();
 
             const result = await ensureSession(mockRunner, 'some-session');
 
-            expect(result.userId).toBe('test_user');
+            expect(result.userId).toBe('anonymous');
         });
 
         it('uses provided userId in the returned SessionInfo', async () => {

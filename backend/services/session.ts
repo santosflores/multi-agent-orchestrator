@@ -1,5 +1,6 @@
 import { InMemoryRunner, CreateSessionRequest } from '@google/adk';
 
+const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID || 'anonymous';
 export interface SessionInfo {
     sessionId: string;
     userId: string;
@@ -14,7 +15,7 @@ export async function ensureSession(
     sessionId?: string,
     userId?: string
 ): Promise<SessionInfo> {
-    const resolvedUserId = userId || 'test_user';
+    const resolvedUserId = userId || DEFAULT_USER_ID;
 
     if (!sessionId) {
         const config: CreateSessionRequest = {
