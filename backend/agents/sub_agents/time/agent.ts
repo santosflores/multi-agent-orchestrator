@@ -1,6 +1,6 @@
 import { FunctionTool, LlmAgent } from "@google/adk";
 import { z } from "zod";
-import { AGENT_MODEL } from "../../config";
+import { AGENT_MODEL } from "../../../config/agent";
 
 // Agent configuration
 const AGENT_NAME = 'currentTime';

@@ -1,7 +1,7 @@
 import { LlmAgent } from '@google/adk';
 import { weatherAgent } from './sub_agents/weather/agent';
 import { currentTimeAgent } from './sub_agents/time/agent';
-import { AGENT_MODEL } from './config';
+import { AGENT_MODEL } from '../config/agent';
 
 const AGENT_NAME = 'orchestrator';
 const AGENT_DESCRIPTION = 'Orchestrator agent';
