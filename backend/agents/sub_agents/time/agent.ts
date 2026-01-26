@@ -1,9 +1,5 @@
 import { FunctionTool, LlmAgent } from "@google/adk";
 import { z } from "zod";
-import { config } from "dotenv";
-
-// Load environment variables
-config();
 
 // Agent configuration
 const AGENT_NAME = 'currentTime';
