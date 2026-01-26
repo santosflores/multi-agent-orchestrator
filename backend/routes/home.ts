@@ -41,6 +41,7 @@ export function registerHomeRoute(fastify: FastifyInstance, runner: InMemoryRunn
                 .header('Connection', 'keep-alive')
                 .send(stream);
         } catch (error) {
+            request.log.error({ err: error }, 'Failed to process request');
             reply.status(500).send({ error: 'Internal Server Error' });
         }
     });
