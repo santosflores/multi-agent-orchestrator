@@ -1,7 +1,7 @@
 import { FunctionTool, LlmAgent } from '@google/adk';
 import { ToolResponse } from '../../../types/agent';
 import { z } from 'zod';
-import { AGENT_MODEL } from '../../../config/agent';
+import { AGENT_MODEL, OPEN_WEATHER_API_KEY } from '../../../config/agent';
 
 // Agent configuration
 const AGENT_NAME = 'weather';
@@ -13,11 +13,7 @@ const AGENT_INSTRUCTION = 'You are a weather agent that can get the current weat
  * @param location - The location to get the weather for
  * @returns The current weather in the given location
  */
-const OPEN_WEATHER_API_KEY = process.env.OPEN_WEATHER_API_KEY;
-
 export const getCurrentWeatherHandler = async ({ location }: { location: string }): Promise<ToolResponse> => {
-    console.log('Getting current weather for location:', location);
-
     if (!OPEN_WEATHER_API_KEY) {
         console.error('OPEN_WEATHER_API_KEY is not set');
         return {
