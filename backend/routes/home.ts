@@ -61,12 +61,19 @@ async function* streamAgentResponse(
 
     // Send initial state
     const currentDate = new Date().toISOString();
-    yield stateSnapshotEvent({ current_date: currentDate });
+    yield stateSnapshotEvent({
+        current_date: currentDate
+    });
 
     yield textMessageStartEvent(messageId);
 
     // Store active tool call IDs to match starts with results (FIFO assumption)
     const activeToolCallIds: string[] = [];
+
+    // Maintain current state to support merging updates
+    const currentState: { current_date?: string; location?: string } = {
+        current_date: currentDate
+    };
 
     let hasContent = false;
 
@@ -82,6 +89,15 @@ async function* streamAgentResponse(
                 for (const call of functionCalls) {
                     const callId = randomUUID(); // CopilotKit needs an ID
                     activeToolCallIds.push(callId);
+
+                    // Check for location in args to update shared state
+                    if (call.args && typeof call.args === 'object' && 'location' in call.args) {
+                        const newLocation = (call.args as any).location;
+                        if (newLocation && newLocation !== currentState.location) {
+                            currentState.location = newLocation;
+                            yield stateSnapshotEvent(currentState);
+                        }
+                    }
 
                     yield toolCallStartEvent(callId, call.name || 'unknown');
                     yield toolCallArgsEvent(callId, JSON.stringify(call.args));
