@@ -1,6 +1,6 @@
 import { InMemoryRunner } from "@google/adk";
 import { FastifyInstance, FastifyRequest } from "fastify";
-import { extractPrompt, runFinishedEvent, runStartedEvent, textMessageContentEvent, textMessageEndEvent, textMessageStartEvent } from "../utils";
+import { extractPrompt, runFinishedEvent, runStartedEvent, textMessageContentEvent, textMessageEndEvent, textMessageStartEvent, stateSnapshotEvent } from "../utils";
 import { randomUUID } from "crypto";
 import { ensureSession } from "../services/session";
 import { Readable } from "stream";
@@ -58,6 +58,11 @@ async function* streamAgentResponse(
     const runId = randomUUID();
 
     yield runStartedEvent(threadId, runId);
+
+    // Send initial state
+    const currentDate = new Date().toISOString();
+    yield stateSnapshotEvent({ current_date: currentDate });
+
     yield textMessageStartEvent(messageId);
 
     let hasContent = false;

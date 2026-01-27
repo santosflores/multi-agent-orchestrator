@@ -1,4 +1,5 @@
 import { EventType } from '@ag-ui/core';
+import { AgentState } from "../../types/agent";
 
 /**
  * Formats data as a Server-Sent Events (SSE) message.
@@ -58,5 +59,16 @@ export function runFinishedEvent(threadId: string, runId: string): string {
         type: EventType.RUN_FINISHED,
         threadId,
         runId
+    });
+}
+
+
+/**
+ * Creates a STATE_SNAPSHOT SSE event.
+ */
+export function stateSnapshotEvent(snapshot: AgentState): string {
+    return sseEvent({
+        type: EventType.STATE_SNAPSHOT,
+        snapshot
     });
 }

@@ -3,3 +3,9 @@ export interface ToolResponse<T = any> {
     data?: T;
     message?: string;
 }
+
+export interface AgentState {
+
+    // Metadata
+    current_date?: string;
+}
