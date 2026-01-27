@@ -1,11 +1,9 @@
 import { InMemoryRunner } from "@google/adk";
 import { FastifyInstance, FastifyRequest } from "fastify";
-import { extractPrompt, runFinishedEvent, runStartedEvent, textMessageContentEvent, textMessageEndEvent, textMessageStartEvent, stateSnapshotEvent, toolCallStartEvent, toolCallArgsEvent, toolCallEndEvent, toolCallResultEvent, runErrorEvent } from "../utils";
-import { randomUUID } from "crypto";
+import { extractPrompt } from "../utils";
 import { ensureSession } from "../services/session";
 import { Readable } from "stream";
-import { stringifyContent, Event, getFunctionCalls, getFunctionResponses } from "@google/adk";
-import { AgentState, SHARED_STATE_KEYS } from "../types/agent";
+import { streamAgentResponse } from "../utils";
 
 export function registerHomeRoute(fastify: FastifyInstance, runner: InMemoryRunner) {
     fastify.get('/', async (request) => {
@@ -46,132 +44,4 @@ export function registerHomeRoute(fastify: FastifyInstance, runner: InMemoryRunn
             reply.status(500).send({ error: 'Internal Server Error' });
         }
     });
-}
-
-
-
-async function* streamAgentResponse(
-    result: AsyncIterable<Event>,
-    threadId: string,
-    request: FastifyRequest
-): AsyncGenerator<string> {
-    const messageId = randomUUID();
-    const runId = randomUUID();
-
-    yield runStartedEvent(threadId, runId);
-
-    // Send initial state
-    const currentDate = new Date().toISOString();
-    yield stateSnapshotEvent({
-        current_date: currentDate
-    });
-
-    yield textMessageStartEvent(messageId);
-
-    // Store active tool call IDs to match starts with results (FIFO assumption)
-    const activeToolCallIds: string[] = [];
-
-    // Maintain current state to support merging updates
-    const currentState: AgentState = {
-        current_date: currentDate
-    };
-
-    let hasContent = false;
-
-    try {
-        for await (const event of result) {
-
-            // Handle Function Calls (Tool Calls)
-            const functionCalls = getFunctionCalls(event);
-            if (functionCalls.length > 0) {
-                // Since this uses random IDs, we need to be careful.
-                // Assuming ADK events map well to single "turns" or consistent re-emission.
-                // For simplicity here, we assume one-shot tool calls as per common patterns.
-                for (const call of functionCalls) {
-                    const callId = randomUUID(); // CopilotKit needs an ID
-                    activeToolCallIds.push(callId);
-
-                    // Generic state update based on SHARED_STATE_KEYS
-                    // This creates an implicit binding: if a tool uses an argument name that matches a state key_
-                    // we update the shared state automatically.
-                    if (call.args && typeof call.args === 'object') {
-                        let stateUpdated = false;
-                        for (const key of SHARED_STATE_KEYS) {
-                            if (key in call.args) {
-                                const newValue = (call.args as any)[key];
-                                if (newValue && newValue !== currentState[key as keyof AgentState]) {
-                                    (currentState as any)[key] = newValue;
-                                    stateUpdated = true;
-                                }
-                            }
-                        }
-
-                        if (stateUpdated) {
-                            yield stateSnapshotEvent(currentState);
-                        }
-                    }
-
-                    yield toolCallStartEvent(callId, call.name || 'unknown');
-                    yield toolCallArgsEvent(callId, JSON.stringify(call.args));
-                    yield toolCallEndEvent(callId);
-                }
-            }
-
-            // Handle Function Responses (Tool Results)
-            const functionResponses = getFunctionResponses(event);
-            if (functionResponses.length > 0) {
-                for (const resp of functionResponses) {
-                    const toolResultMessageId = randomUUID();
-                    // Match result to the earliest active tool call (FIFO)
-                    const callId = activeToolCallIds.shift() || randomUUID();
-
-                    // Generic state update from Tool Response
-                    if (resp.response && typeof resp.response === 'object') {
-                        let stateUpdated = false;
-                        // Support both direct response properties and nested 'data' property (ToolResponse pattern)
-                        const sourceObjects = [resp.response, (resp.response as any).data];
-
-                        for (const source of sourceObjects) {
-                            if (source && typeof source === 'object') {
-                                for (const key of SHARED_STATE_KEYS) {
-                                    if (key in source) {
-                                        const newValue = (source as any)[key];
-                                        // Simple equality check, could be enhanced for deep comparison
-                                        if (newValue !== undefined && newValue !== currentState[key as keyof AgentState]) {
-                                            (currentState as any)[key] = newValue;
-                                            stateUpdated = true;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        if (stateUpdated) {
-                            yield stateSnapshotEvent(currentState);
-                        }
-                    }
-
-                    yield toolCallResultEvent(toolResultMessageId, callId, JSON.stringify(resp.response));
-                }
-            }
-
-            const delta = stringifyContent(event);
-            if (delta && delta.length > 0) {
-                hasContent = true;
-                yield textMessageContentEvent(messageId, delta);
-            }
-        }
-
-        if (!hasContent) {
-            request.log.warn('No content was extracted from ADK events');
-        }
-
-        yield textMessageEndEvent(messageId);
-        yield runFinishedEvent(threadId, runId);
-
-    } catch (e: any) {
-        request.log.error(e, 'Error during agent execution stream');
-        yield runErrorEvent("RUNTIME_ERROR", e.message || 'Unknown error occurred');
-        yield runFinishedEvent(threadId, runId);
-    }
 }
