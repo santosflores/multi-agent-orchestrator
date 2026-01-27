@@ -35,6 +35,7 @@ export default function Home() {
             </p>
           </header>
         </div>
+        Current Date:{state.current_date}
       </main>
     </CopilotSidebar>
   );
