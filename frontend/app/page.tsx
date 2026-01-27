@@ -18,9 +18,6 @@ export default function Home() {
   useCoAgentStateRender<AgentState>({
     name: "default"
   });
-
-  console.log(`Agent State: ${state}`);
-
   return (
     <CopilotSidebar defaultOpen={true} clickOutsideToClose={false}>
       <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -34,8 +31,9 @@ export default function Home() {
               Powered by Google ADK + Gemini 3 | Multi-Agent Web Application
             </p>
           </header>
+          Current Date:&nbsp;{state.current_date}
         </div>
-        Current Date:{state.current_date}
+
       </main>
     </CopilotSidebar>
   );
