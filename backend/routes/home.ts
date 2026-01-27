@@ -125,6 +125,32 @@ async function* streamAgentResponse(
                     // Match result to the earliest active tool call (FIFO)
                     const callId = activeToolCallIds.shift() || randomUUID();
 
+                    // Generic state update from Tool Response
+                    if (resp.response && typeof resp.response === 'object') {
+                        let stateUpdated = false;
+                        // Support both direct response properties and nested 'data' property (ToolResponse pattern)
+                        const sourceObjects = [resp.response, (resp.response as any).data];
+
+                        for (const source of sourceObjects) {
+                            if (source && typeof source === 'object') {
+                                for (const key of SHARED_STATE_KEYS) {
+                                    if (key in source) {
+                                        const newValue = (source as any)[key];
+                                        // Simple equality check, could be enhanced for deep comparison
+                                        if (newValue !== undefined && newValue !== currentState[key as keyof AgentState]) {
+                                            (currentState as any)[key] = newValue;
+                                            stateUpdated = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (stateUpdated) {
+                            yield stateSnapshotEvent(currentState);
+                        }
+                    }
+
                     yield toolCallResultEvent(toolResultMessageId, callId, JSON.stringify(resp.response));
                 }
             }
