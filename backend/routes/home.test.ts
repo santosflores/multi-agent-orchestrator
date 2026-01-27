@@ -266,14 +266,15 @@ describe('registerHomeRoute', () => {
             const stream = mockReply.send.mock.calls[0]![0];
             const chunks = await consumeStream(stream);
 
-            // Should have: RUN_STARTED, TEXT_MESSAGE_START, TEXT_MESSAGE_END, RUN_FINISHED
-            expect(chunks).toHaveLength(4);
+            // Should have: RUN_STARTED, STATE_SNAPSHOT, TEXT_MESSAGE_START, TEXT_MESSAGE_END, RUN_FINISHED
+            expect(chunks).toHaveLength(5);
 
             // Verify event types in order
             expect(chunks[0]).toContain('"type":"RUN_STARTED"');
-            expect(chunks[1]).toContain('"type":"TEXT_MESSAGE_START"');
-            expect(chunks[2]).toContain('"type":"TEXT_MESSAGE_END"');
-            expect(chunks[3]).toContain('"type":"RUN_FINISHED"');
+            expect(chunks[1]).toContain('"type":"STATE_SNAPSHOT"');
+            expect(chunks[2]).toContain('"type":"TEXT_MESSAGE_START"');
+            expect(chunks[3]).toContain('"type":"TEXT_MESSAGE_END"');
+            expect(chunks[4]).toContain('"type":"RUN_FINISHED"');
         });
 
         it('logs warning when no content extracted', async () => {
