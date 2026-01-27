@@ -60,17 +60,17 @@ async function* streamAgentResponse(
     yield runStartedEvent(threadId, runId);
     yield textMessageStartEvent(messageId);
 
-    let fullContent = '';
+    let hasContent = false;
 
     for await (const event of result) {
         const delta = stringifyContent(event);
         if (delta && delta.length > 0) {
-            fullContent += delta;
+            hasContent = true;
             yield textMessageContentEvent(messageId, delta);
         }
     }
 
-    if (fullContent.length === 0) {
+    if (!hasContent) {
         request.log.warn('No content was extracted from ADK events');
     }
 
