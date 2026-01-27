@@ -9,6 +9,7 @@ export interface ToolResponse<T = any> {
 export const AgentStateSchema = z.object({
     location: z.string().optional(),
     current_date: z.string().optional(),
+    temperature: z.number().optional(),
 });
 
 export type AgentState = z.infer<typeof AgentStateSchema>;
