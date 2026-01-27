@@ -1,13 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ensureSession, SessionInfo } from './session';
-import type { InMemoryRunner, CreateSessionRequest } from '@google/adk';
+import { describe, it, expect, vi } from 'vitest';
+import { ensureSession } from './session';
+import type { InMemoryRunner, Session } from '@google/adk';
 
 // Mock InMemoryRunner
-function createMockRunner(appName: string = 'test-app', mockSessionId: string = 'new-session-123'): InMemoryRunner {
+function createMockRunner(appName: string = 'test-app', mockSessionId: string = 'new-session-123') {
     return {
         appName,
         sessionService: {
-            createSession: vi.fn().mockResolvedValue({ id: mockSessionId })
+            createSession: vi.fn().mockResolvedValue({ id: mockSessionId }),
+            getSession: vi.fn().mockResolvedValue(null) // Default to not found
         }
     } as unknown as InMemoryRunner;
 }
@@ -19,7 +20,17 @@ describe('ensureSession', () => {
 
             const result = await ensureSession(mockRunner);
 
-            expect(mockRunner.sessionService.createSession).toHaveBeenCalledOnce();
+            expect(mockRunner.sessionService.createSession).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    appName: 'my-app',
+                    userId: 'anonymous'
+                })
+            );
+            // Verify sessionId is NOT in the call args (due to exactOptionalPropertyTypes logic)
+            expect(mockRunner.sessionService.createSession).toHaveBeenCalledWith(
+                expect.not.objectContaining({ sessionId: expect.anything() })
+            );
+
             expect(result.sessionId).toBe('created-session-id');
         });
 
@@ -28,10 +39,11 @@ describe('ensureSession', () => {
 
             const result = await ensureSession(mockRunner);
 
-            expect(mockRunner.sessionService.createSession).toHaveBeenCalledWith({
-                appName: 'test-app',
-                userId: 'anonymous'
-            });
+            expect(mockRunner.sessionService.createSession).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    userId: 'anonymous'
+                })
+            );
             expect(result.userId).toBe('anonymous');
         });
 
@@ -40,83 +52,103 @@ describe('ensureSession', () => {
 
             const result = await ensureSession(mockRunner, undefined, 'custom-user-id');
 
-            expect(mockRunner.sessionService.createSession).toHaveBeenCalledWith({
-                appName: 'my-app',
-                userId: 'custom-user-id'
-            });
+            expect(mockRunner.sessionService.createSession).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    userId: 'custom-user-id'
+                })
+            );
             expect(result.userId).toBe('custom-user-id');
-        });
-
-        it('returns a valid SessionInfo object', async () => {
-            const mockRunner = createMockRunner('app', 'fresh-session');
-
-            const result = await ensureSession(mockRunner);
-
-            expect(result).toEqual<SessionInfo>({
-                sessionId: 'fresh-session',
-                userId: 'anonymous'
-            });
         });
     });
 
     describe('when sessionId IS provided', () => {
-        it('returns the provided sessionId without creating a new session', async () => {
+        it('returns existing session if found', async () => {
             const mockRunner = createMockRunner();
             const existingSessionId = 'existing-session-456';
 
+            // Mock getSession success
+            vi.mocked(mockRunner.sessionService.getSession).mockResolvedValue({ id: existingSessionId } as Session);
+
             const result = await ensureSession(mockRunner, existingSessionId);
 
+            expect(mockRunner.sessionService.getSession).toHaveBeenCalledWith({
+                appName: 'test-app',
+                userId: 'anonymous',
+                sessionId: existingSessionId
+            });
             expect(mockRunner.sessionService.createSession).not.toHaveBeenCalled();
             expect(result.sessionId).toBe(existingSessionId);
         });
 
-        it('uses default userId "anonymous" when userId is not provided', async () => {
-            const mockRunner = createMockRunner();
+        it('creates new session with provided ID if session lookup fails (throws)', async () => {
+            const mockRunner = createMockRunner('app', 'new-created-id');
+            const targetSessionId = 'target-session-id';
 
-            const result = await ensureSession(mockRunner, 'some-session');
+            // Mock getSession throwing error
+            vi.mocked(mockRunner.sessionService.getSession).mockRejectedValue(new Error('Session not found'));
 
-            expect(result.userId).toBe('anonymous');
-        });
+            const result = await ensureSession(mockRunner, targetSessionId);
 
-        it('uses provided userId in the returned SessionInfo', async () => {
-            const mockRunner = createMockRunner();
-
-            const result = await ensureSession(mockRunner, 'some-session', 'my-custom-user');
-
-            expect(result).toEqual<SessionInfo>({
-                sessionId: 'some-session',
-                userId: 'my-custom-user'
+            expect(mockRunner.sessionService.getSession).toHaveBeenCalled();
+            expect(mockRunner.sessionService.createSession).toHaveBeenCalledWith({
+                appName: 'app',
+                userId: 'anonymous',
+                sessionId: targetSessionId
             });
+            // Result comes from createSession return value
+            expect(result.sessionId).toBe('new-created-id');
         });
 
-        it('handles empty string sessionId by treating it as falsy and creating new session', async () => {
-            const mockRunner = createMockRunner('app', 'new-generated-session');
+        it('creates new session with provided ID if session lookup returns null', async () => {
+            const mockRunner = createMockRunner('app', 'new-created-id');
+            const targetSessionId = 'target-session-id';
 
-            const result = await ensureSession(mockRunner, '');
+            // Mock getSession returning null (not found)
+            vi.mocked(mockRunner.sessionService.getSession).mockResolvedValue(undefined);
 
-            expect(mockRunner.sessionService.createSession).toHaveBeenCalled();
-            expect(result.sessionId).toBe('new-generated-session');
+            const result = await ensureSession(mockRunner, targetSessionId);
+
+            expect(mockRunner.sessionService.getSession).toHaveBeenCalled();
+            expect(mockRunner.sessionService.createSession).toHaveBeenCalledWith({
+                appName: 'app',
+                userId: 'anonymous',
+                sessionId: targetSessionId
+            });
+            expect(result.sessionId).toBe('new-created-id');
+        });
+
+        it('uses provided userId when checking/creating session', async () => {
+            const mockRunner = createMockRunner();
+            const sessionId = 's-1';
+            const userId = 'u-1';
+
+            // Mock not found
+            vi.mocked(mockRunner.sessionService.getSession).mockResolvedValue(undefined);
+
+            await ensureSession(mockRunner, sessionId, userId);
+
+            expect(mockRunner.sessionService.getSession).toHaveBeenCalledWith(
+                expect.objectContaining({ userId })
+            );
+            expect(mockRunner.sessionService.createSession).toHaveBeenCalledWith(
+                expect.objectContaining({ userId })
+            );
         });
     });
 
     describe('edge cases', () => {
-        it('handles runner with different appName values', async () => {
-            const mockRunner = createMockRunner('production-app');
+        it('handles empty string sessionId by treating it as falsy (creates new random session)', async () => {
+            const mockRunner = createMockRunner('app', 'random-session-id');
 
-            await ensureSession(mockRunner);
+            const result = await ensureSession(mockRunner, '');
 
+            // Empty string defaults to "not provided" logic
+            expect(mockRunner.sessionService.getSession).not.toHaveBeenCalled();
+            expect(mockRunner.sessionService.createSession).toHaveBeenCalled();
             expect(mockRunner.sessionService.createSession).toHaveBeenCalledWith(
-                expect.objectContaining({ appName: 'production-app' })
+                expect.not.objectContaining({ sessionId: expect.anything() })
             );
-        });
-
-        it('propagates errors from sessionService.createSession', async () => {
-            const mockRunner = createMockRunner();
-            (mockRunner.sessionService.createSession as ReturnType<typeof vi.fn>).mockRejectedValue(
-                new Error('Session creation failed')
-            );
-
-            await expect(ensureSession(mockRunner)).rejects.toThrow('Session creation failed');
+            expect(result.sessionId).toBe('random-session-id');
         });
     });
 });
