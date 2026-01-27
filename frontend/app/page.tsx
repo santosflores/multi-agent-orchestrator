@@ -7,6 +7,8 @@ import { useCoAgent, useCoAgentStateRender } from "@copilotkit/react-core";
 export interface AgentState {
 
   // Metadata
+  location?: string;
+  temperature?: number;
   current_date?: string;
 }
 
@@ -32,6 +34,10 @@ export default function Home() {
             </p>
           </header>
           Current Date:&nbsp;{state.current_date}
+          <br />
+          Location:&nbsp;{state.location}
+          <br />
+          Temperature:&nbsp;{state.temperature}
         </div>
 
       </main>
