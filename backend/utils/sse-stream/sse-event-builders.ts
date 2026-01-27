@@ -1,4 +1,5 @@
 import { EventType } from '@ag-ui/core';
+import { AgentState } from "../../types/agent";
 
 /**
  * Formats data as a Server-Sent Events (SSE) message.
@@ -58,5 +59,71 @@ export function runFinishedEvent(threadId: string, runId: string): string {
         type: EventType.RUN_FINISHED,
         threadId,
         runId
+    });
+}
+
+
+/**
+ * Creates a STATE_SNAPSHOT SSE event.
+ */
+export function stateSnapshotEvent(snapshot: AgentState): string {
+    return sseEvent({
+        type: EventType.STATE_SNAPSHOT,
+        snapshot
+    });
+}
+
+/**
+ * Creates a TOOL_CALL_START SSE event.
+ */
+export function toolCallStartEvent(toolCallId: string, toolCallName: string): string {
+    return sseEvent({
+        type: EventType.TOOL_CALL_START,
+        toolCallId,
+        toolCallName
+    });
+}
+
+/**
+ * Creates a TOOL_CALL_ARGS SSE event.
+ */
+export function toolCallArgsEvent(toolCallId: string, args: string): string {
+    return sseEvent({
+        type: EventType.TOOL_CALL_ARGS,
+        toolCallId,
+        delta: args
+    });
+}
+
+/**
+ * Creates a TOOL_CALL_END SSE event.
+ */
+export function toolCallEndEvent(toolCallId: string): string {
+    return sseEvent({
+        type: EventType.TOOL_CALL_END,
+        toolCallId
+    });
+}
+
+/**
+ * Creates a TOOL_CALL_RESULT SSE event.
+ */
+export function toolCallResultEvent(messageId: string, toolCallId: string, result: string): string {
+    return sseEvent({
+        type: EventType.TOOL_CALL_RESULT,
+        messageId,
+        toolCallId,
+        content: result
+    });
+}
+
+/**
+ * Creates a RUN_ERROR SSE event.
+ */
+export function runErrorEvent(code: string, message: string): string {
+    return sseEvent({
+        type: EventType.RUN_ERROR,
+        code,
+        message
     });
 }

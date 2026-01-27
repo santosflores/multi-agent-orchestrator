@@ -1,10 +1,9 @@
 import { InMemoryRunner } from "@google/adk";
 import { FastifyInstance, FastifyRequest } from "fastify";
-import { extractPrompt, runFinishedEvent, runStartedEvent, textMessageContentEvent, textMessageEndEvent, textMessageStartEvent } from "../utils";
-import { randomUUID } from "crypto";
+import { extractPrompt } from "../utils";
 import { ensureSession } from "../services/session";
 import { Readable } from "stream";
-import { stringifyContent, Event } from "@google/adk";
+import { streamAgentResponse } from "../utils";
 
 export function registerHomeRoute(fastify: FastifyInstance, runner: InMemoryRunner) {
     fastify.get('/', async (request) => {
@@ -45,35 +44,4 @@ export function registerHomeRoute(fastify: FastifyInstance, runner: InMemoryRunn
             reply.status(500).send({ error: 'Internal Server Error' });
         }
     });
-}
-
-
-
-async function* streamAgentResponse(
-    result: AsyncIterable<Event>,
-    threadId: string,
-    request: FastifyRequest
-): AsyncGenerator<string> {
-    const messageId = randomUUID();
-    const runId = randomUUID();
-
-    yield runStartedEvent(threadId, runId);
-    yield textMessageStartEvent(messageId);
-
-    let hasContent = false;
-
-    for await (const event of result) {
-        const delta = stringifyContent(event);
-        if (delta && delta.length > 0) {
-            hasContent = true;
-            yield textMessageContentEvent(messageId, delta);
-        }
-    }
-
-    if (!hasContent) {
-        request.log.warn('No content was extracted from ADK events');
-    }
-
-    yield textMessageEndEvent(messageId);
-    yield runFinishedEvent(threadId, runId);
 }

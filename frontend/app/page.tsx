@@ -7,7 +7,10 @@ import { useCoAgent, useCoAgentStateRender } from "@copilotkit/react-core";
 export interface AgentState {
 
   // Metadata
+  location?: string;
+  temperature?: number;
   current_date?: string;
+  time?: string;
 }
 
 export default function Home() {
@@ -18,9 +21,6 @@ export default function Home() {
   useCoAgentStateRender<AgentState>({
     name: "default"
   });
-
-  console.log(`Agent State: ${state}`);
-
   return (
     <CopilotSidebar defaultOpen={true} clickOutsideToClose={false}>
       <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -34,7 +34,15 @@ export default function Home() {
               Powered by Google ADK + Gemini 3 | Multi-Agent Web Application
             </p>
           </header>
+          Current Date:&nbsp;{state.current_date}
+          <br />
+          Location:&nbsp;{state.location}
+          <br />
+          Temperature:&nbsp;{state.temperature}
+          <br />
+          Current Time:&nbsp;{state.time}
         </div>
+
       </main>
     </CopilotSidebar>
   );
