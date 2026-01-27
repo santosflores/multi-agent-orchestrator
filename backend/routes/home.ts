@@ -1,10 +1,10 @@
 import { InMemoryRunner } from "@google/adk";
 import { FastifyInstance, FastifyRequest } from "fastify";
-import { extractPrompt, runFinishedEvent, runStartedEvent, textMessageContentEvent, textMessageEndEvent, textMessageStartEvent, stateSnapshotEvent } from "../utils";
+import { extractPrompt, runFinishedEvent, runStartedEvent, textMessageContentEvent, textMessageEndEvent, textMessageStartEvent, stateSnapshotEvent, toolCallStartEvent, toolCallArgsEvent, toolCallEndEvent, toolCallResultEvent, runErrorEvent } from "../utils";
 import { randomUUID } from "crypto";
 import { ensureSession } from "../services/session";
 import { Readable } from "stream";
-import { stringifyContent, Event } from "@google/adk";
+import { stringifyContent, Event, getFunctionCalls, getFunctionResponses } from "@google/adk";
 
 export function registerHomeRoute(fastify: FastifyInstance, runner: InMemoryRunner) {
     fastify.get('/', async (request) => {
@@ -65,20 +65,59 @@ async function* streamAgentResponse(
 
     yield textMessageStartEvent(messageId);
 
+    // Store active tool call IDs to match starts with results (FIFO assumption)
+    const activeToolCallIds: string[] = [];
+
     let hasContent = false;
 
-    for await (const event of result) {
-        const delta = stringifyContent(event);
-        if (delta && delta.length > 0) {
-            hasContent = true;
-            yield textMessageContentEvent(messageId, delta);
+    try {
+        for await (const event of result) {
+
+            // Handle Function Calls (Tool Calls)
+            const functionCalls = getFunctionCalls(event);
+            if (functionCalls.length > 0) {
+                // Since this uses random IDs, we need to be careful.
+                // Assuming ADK events map well to single "turns" or consistent re-emission.
+                // For simplicity here, we assume one-shot tool calls as per common patterns.
+                for (const call of functionCalls) {
+                    const callId = randomUUID(); // CopilotKit needs an ID
+                    activeToolCallIds.push(callId);
+
+                    yield toolCallStartEvent(callId, call.name || 'unknown');
+                    yield toolCallArgsEvent(callId, JSON.stringify(call.args));
+                    yield toolCallEndEvent(callId);
+                }
+            }
+
+            // Handle Function Responses (Tool Results)
+            const functionResponses = getFunctionResponses(event);
+            if (functionResponses.length > 0) {
+                for (const resp of functionResponses) {
+                    const toolResultMessageId = randomUUID();
+                    // Match result to the earliest active tool call (FIFO)
+                    const callId = activeToolCallIds.shift() || randomUUID();
+
+                    yield toolCallResultEvent(toolResultMessageId, callId, JSON.stringify(resp.response));
+                }
+            }
+
+            const delta = stringifyContent(event);
+            if (delta && delta.length > 0) {
+                hasContent = true;
+                yield textMessageContentEvent(messageId, delta);
+            }
         }
-    }
 
-    if (!hasContent) {
-        request.log.warn('No content was extracted from ADK events');
-    }
+        if (!hasContent) {
+            request.log.warn('No content was extracted from ADK events');
+        }
 
-    yield textMessageEndEvent(messageId);
-    yield runFinishedEvent(threadId, runId);
+        yield textMessageEndEvent(messageId);
+        yield runFinishedEvent(threadId, runId);
+
+    } catch (e: any) {
+        request.log.error(e, 'Error during agent execution stream');
+        yield runErrorEvent("RUNTIME_ERROR", e.message || 'Unknown error occurred');
+        yield runFinishedEvent(threadId, runId);
+    }
 }

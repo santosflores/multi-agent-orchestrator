@@ -72,3 +72,58 @@ export function stateSnapshotEvent(snapshot: AgentState): string {
         snapshot
     });
 }
+
+/**
+ * Creates a TOOL_CALL_START SSE event.
+ */
+export function toolCallStartEvent(toolCallId: string, toolCallName: string): string {
+    return sseEvent({
+        type: EventType.TOOL_CALL_START,
+        toolCallId,
+        toolCallName
+    });
+}
+
+/**
+ * Creates a TOOL_CALL_ARGS SSE event.
+ */
+export function toolCallArgsEvent(toolCallId: string, args: string): string {
+    return sseEvent({
+        type: EventType.TOOL_CALL_ARGS,
+        toolCallId,
+        delta: args
+    });
+}
+
+/**
+ * Creates a TOOL_CALL_END SSE event.
+ */
+export function toolCallEndEvent(toolCallId: string): string {
+    return sseEvent({
+        type: EventType.TOOL_CALL_END,
+        toolCallId
+    });
+}
+
+/**
+ * Creates a TOOL_CALL_RESULT SSE event.
+ */
+export function toolCallResultEvent(messageId: string, toolCallId: string, result: string): string {
+    return sseEvent({
+        type: EventType.TOOL_CALL_RESULT,
+        messageId,
+        toolCallId,
+        content: result
+    });
+}
+
+/**
+ * Creates a RUN_ERROR SSE event.
+ */
+export function runErrorEvent(code: string, message: string): string {
+    return sseEvent({
+        type: EventType.RUN_ERROR,
+        code,
+        message
+    });
+}
