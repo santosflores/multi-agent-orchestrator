@@ -1,4 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('../../../config/agent', () => ({
+    AGENT_MODEL: 'gemini-3-flash-preview',
+    OPEN_WEATHER_API_KEY: 'test-api-key'
+}));
+
 import { weatherAgent, getCurrentWeatherHandler } from './agent';
 
 describe('getCurrentWeatherHandler', () => {
