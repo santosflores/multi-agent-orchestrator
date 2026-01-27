@@ -21,7 +21,7 @@ export function registerHomeRoute(fastify: FastifyInstance, runner: InMemoryRunn
             const inputSessionId = typeof body.threadId === 'string' ? body.threadId : undefined;
             const inputUserId = typeof body.userId === 'string' ? body.userId : undefined;
 
-            const { sessionId, userId } = await ensureSession(runner, inputSessionId, inputUserId);
+            const { id: sessionId, userId } = await ensureSession(runner, inputSessionId, inputUserId);
 
             const result = runner.runAsync({
                 userId,

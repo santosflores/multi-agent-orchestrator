@@ -1,10 +1,6 @@
-import { InMemoryRunner, CreateSessionRequest } from '@google/adk';
+import { InMemoryRunner, CreateSessionRequest, Session } from '@google/adk';
 
 const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID || 'anonymous';
-export interface SessionInfo {
-    sessionId: string;
-    userId: string;
-}
 
 /**
  * Ensures a valid session exists, creating one if necessary.
@@ -14,7 +10,7 @@ export async function ensureSession(
     runner: InMemoryRunner,
     sessionId?: string,
     userId?: string
-): Promise<SessionInfo> {
+): Promise<Session> {
     const resolvedUserId = userId || DEFAULT_USER_ID;
 
     // If sessionId provided, check if it exists
@@ -26,7 +22,7 @@ export async function ensureSession(
                 sessionId
             });
             if (existing) {
-                return { sessionId, userId: resolvedUserId };
+                return existing;
             }
         } catch {
             // Session doesn't exist, will create below
@@ -40,8 +36,5 @@ export async function ensureSession(
         ...(sessionId && { sessionId }) // Only include if defined (exactOptionalPropertyTypes compat)
     };
     const session = await runner.sessionService.createSession(config);
-    return {
-        sessionId: session.id,
-        userId: resolvedUserId
-    };
+    return session;
 }
