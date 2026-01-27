@@ -14,24 +14,20 @@ export function extractPrompt(body: Record<string, unknown>): string {
 
     // AG-UI messages array format
     if (Array.isArray(body.messages)) {
-        const userMessages = body.messages.filter(
-            (m: unknown): m is { role: string; content: string | { text?: string } } =>
-                typeof m === 'object' && m !== null && (m as { role?: unknown }).role === 'user'
-        );
+        for (let i = body.messages.length - 1; i >= 0; i--) {
+            const m = body.messages[i];
+            if (typeof m === 'object' && m !== null && (m as { role?: unknown }).role === 'user') {
+                const content = (m as { content?: unknown }).content;
 
-        if (userMessages.length > 0) {
-            const lastMessage = userMessages[userMessages.length - 1];
-            if (!lastMessage) {
+                if (typeof content === 'string') {
+                    return content;
+                }
+
+                if (typeof content === 'object' && content !== null && typeof (content as { text?: unknown }).text === 'string') {
+                    return (content as { text: string }).text;
+                }
+
                 return '';
-            }
-            const content = lastMessage.content;
-
-            if (typeof content === 'string') {
-                return content;
-            }
-
-            if (typeof content === 'object' && content !== null && typeof content.text === 'string') {
-                return content.text;
             }
         }
     }
