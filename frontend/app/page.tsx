@@ -3,6 +3,7 @@
 import "@copilotkit/react-ui/styles.css";
 import { CopilotSidebar } from "@copilotkit/react-ui";
 import { useCoAgent, useCoAgentStateRender } from "@copilotkit/react-core";
+import { RenderMessage } from "../components/Chat/RenderMessage";
 
 export interface AgentState {
 
@@ -19,10 +20,21 @@ export default function Home() {
   });
 
   useCoAgentStateRender<AgentState>({
-    name: "default"
+    name: "default",
+    render: ({ state }) => {
+      return (
+        <div>
+          {state.location}
+        </div>
+      );
+    }
   });
   return (
-    <CopilotSidebar defaultOpen={true} clickOutsideToClose={false}>
+    <CopilotSidebar
+      defaultOpen={true}
+      clickOutsideToClose={false}
+      RenderMessage={RenderMessage}
+    >
       <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="max-w-5xl mx-auto p-8">
           {/* Header */}
