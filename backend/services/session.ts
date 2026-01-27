@@ -17,20 +17,31 @@ export async function ensureSession(
 ): Promise<SessionInfo> {
     const resolvedUserId = userId || DEFAULT_USER_ID;
 
-    if (!sessionId) {
-        const config: CreateSessionRequest = {
-            appName: runner.appName,
-            userId: resolvedUserId
-        };
-        const session = await runner.sessionService.createSession(config);
-        return {
-            sessionId: session.id,
-            userId: resolvedUserId
-        };
+    // If sessionId provided, check if it exists
+    if (sessionId) {
+        try {
+            const existing = await runner.sessionService.getSession({
+                appName: runner.appName,
+                userId: resolvedUserId,
+                sessionId
+            });
+            if (existing) {
+                return { sessionId, userId: resolvedUserId };
+            }
+        } catch {
+            // Session doesn't exist, will create below
+        }
     }
 
+    // Create new session (with provided sessionId if available)
+    const config: CreateSessionRequest = {
+        appName: runner.appName,
+        userId: resolvedUserId,
+        ...(sessionId && { sessionId }) // Only include if defined (exactOptionalPropertyTypes compat)
+    };
+    const session = await runner.sessionService.createSession(config);
     return {
-        sessionId,
+        sessionId: session.id,
         userId: resolvedUserId
     };
 }

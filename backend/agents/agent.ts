@@ -19,3 +19,7 @@ export const orchestratorAgent = new LlmAgent({
     instruction: AGENT_INSTRUCTION,
     subAgents: [weatherAgent, currentTimeAgent]
 });
+
+// Workaround for ADK issue: update rootAgent on sub-agents
+(weatherAgent as any).rootAgent = orchestratorAgent;
+(currentTimeAgent as any).rootAgent = orchestratorAgent;

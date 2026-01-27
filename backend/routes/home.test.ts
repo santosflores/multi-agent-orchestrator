@@ -156,7 +156,7 @@ describe('registerHomeRoute', () => {
             const handler = mockFastify.getHandler('post', '/');
             const mockRequest = createMockRequest({
                 prompt: 'Hello agent',
-                sessionId: 'existing-session',
+                threadId: 'existing-session',
                 userId: 'existing-user'
             });
             const mockReply = createMockReply();

@@ -18,7 +18,8 @@ export function registerHomeRoute(fastify: FastifyInstance, runner: InMemoryRunn
             const body = request.body as Record<string, unknown>;
             const prompt = extractPrompt(body);
 
-            const inputSessionId = typeof body.sessionId === 'string' ? body.sessionId : undefined;
+            // CopilotKit sends threadId - use it as our session identifier
+            const inputSessionId = typeof body.threadId === 'string' ? body.threadId : undefined;
             const inputUserId = typeof body.userId === 'string' ? body.userId : undefined;
 
             const { sessionId, userId } = await ensureSession(runner, inputSessionId, inputUserId);
