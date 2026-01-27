@@ -42,14 +42,12 @@ vi.mock('./routes/home', () => ({
     registerHomeRoute: vi.fn()
 }));
 
-vi.mock('dotenv', () => ({
-    config: vi.fn()
-}));
+
 
 import Fastify from 'fastify';
 import { InMemoryRunner } from '@google/adk';
 import { registerHomeRoute } from './routes/home';
-import { config } from 'dotenv';
+
 import { orchestratorAgent } from './agents/agent';
 
 describe('server.ts', () => {
@@ -69,11 +67,7 @@ describe('server.ts', () => {
     });
 
     describe('module initialization', () => {
-        it('loads environment configuration via dotenv', async () => {
-            await import('./server.js');
 
-            expect(config).toHaveBeenCalled();
-        });
 
         it('creates InMemoryRunner with orchestratorAgent', async () => {
             await import('./server.js');

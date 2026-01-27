@@ -1,11 +1,8 @@
+import 'dotenv/config';
 import Fastify from 'fastify';
-import { config } from 'dotenv';
 import { InMemoryRunner } from '@google/adk';
-
 import { orchestratorAgent } from './agents/agent';
 import { registerHomeRoute } from './routes/home';
-
-config();
 
 const runner = new InMemoryRunner({
     agent: orchestratorAgent,

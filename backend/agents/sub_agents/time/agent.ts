@@ -1,12 +1,10 @@
 import { FunctionTool, LlmAgent } from "@google/adk";
 import { ToolResponse } from "../../../types/agent";
 import { z } from "zod";
-import { config } from "dotenv";
 import { AGENT_MODEL } from "../../../config/agent";
-import { findFromCityStateProvince, lookupViaCity } from "city-timezones";
+import { lookupViaCity } from "city-timezones";
 import { DateTime } from "luxon";
-// Load environment variables
-config();
+
 
 // Agent configuration
 const AGENT_NAME = 'currentTime';
