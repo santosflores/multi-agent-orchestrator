@@ -127,3 +127,15 @@ export function runErrorEvent(code: string, message: string): string {
         message
     });
 }
+
+/**
+ * Creates an ACTIVITY_SNAPSHOT SSE event.
+ */
+export function activitySnapshotEvent(messageId: string, activityType: string, content: Record<string, any>): string {
+    return sseEvent({
+        type: EventType.ACTIVITY_SNAPSHOT,
+        messageId,
+        activityType,
+        content
+    });
+}

@@ -43,7 +43,7 @@ describe('streamAgentResponse', () => {
         return events;
     }
 
-    it('should emit initial events run_started, state_snapshot, text_message_start', async () => {
+    it('should emit initial events run_started, state_snapshot but NOT text_message_start if no text', async () => {
         const emptyIter: AsyncIterable<Event> = {
             [Symbol.asyncIterator]: async function* () { }
         };
@@ -51,10 +51,11 @@ describe('streamAgentResponse', () => {
         const generator = streamAgentResponse(emptyIter, 'thread-1', mockRequest);
         const events = await collectStream(generator);
 
-        expect(events.length).toBeGreaterThanOrEqual(4); // Start, Snapshot, MsgStart, MsgEnd, RunFinished
+        // Expect: Start, Snapshot, RunFinished. No TextStart, No TextEnd.
+        expect(events.length).toBe(3);
         expect(events[0].type).toBe('RUN_STARTED');
         expect(events[1].type).toBe('STATE_SNAPSHOT');
-        expect(events[2].type).toBe('TEXT_MESSAGE_START');
+        expect(events[2].type).toBe('RUN_FINISHED');
     });
 
     it('should emit text content events', async () => {
@@ -70,10 +71,19 @@ describe('streamAgentResponse', () => {
         const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest);
         const events = await collectStream(generator);
 
-        const contentEvents = events.filter(e => e.type === 'TEXT_MESSAGE_CONTENT');
-        expect(contentEvents).toHaveLength(2);
-        expect(contentEvents[0].delta).toBe('Hello');
-        expect(contentEvents[1].delta).toBe(' World');
+        // Verify full sequence
+        expect(events[0].type).toBe('RUN_STARTED');
+        expect(events[1].type).toBe('STATE_SNAPSHOT');
+        expect(events[2].type).toBe('TEXT_MESSAGE_START');
+
+        expect(events[3].type).toBe('TEXT_MESSAGE_CONTENT');
+        expect(events[3].delta).toBe('Hello');
+
+        expect(events[4].type).toBe('TEXT_MESSAGE_CONTENT');
+        expect(events[4].delta).toBe(' World');
+
+        expect(events[5].type).toBe('TEXT_MESSAGE_END');
+        expect(events[6].type).toBe('RUN_FINISHED');
     });
 
     it('should update state from tool calls', async () => {

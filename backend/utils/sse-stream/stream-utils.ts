@@ -6,14 +6,15 @@ import {
     runStartedEvent,
     stateSnapshotEvent,
     textMessageStartEvent,
-    toolCallStartEvent,
+    toolCallStartEvent, // Keep strict imports if needed elsewhere, or remove
     toolCallArgsEvent,
     toolCallEndEvent,
     toolCallResultEvent,
     textMessageContentEvent,
     textMessageEndEvent,
     runFinishedEvent,
-    runErrorEvent
+    runErrorEvent,
+    activitySnapshotEvent
 } from "../../utils";
 
 export async function* streamAgentResponse(
@@ -32,8 +33,6 @@ export async function* streamAgentResponse(
         current_date: currentDate
     });
 
-    yield textMessageStartEvent(messageId);
-
     // Store active tool call IDs to match starts with results (FIFO assumption)
     const activeToolCallIds: string[] = [];
 
@@ -43,6 +42,7 @@ export async function* streamAgentResponse(
     };
 
     let hasContent = false;
+    let messageStarted = false;
 
     try {
         for await (const event of result) {
@@ -50,6 +50,7 @@ export async function* streamAgentResponse(
             // Handle Function Calls (Tool Calls)
             const functionCalls = getFunctionCalls(event);
             if (functionCalls.length > 0) {
+                console.log('Server: Detected function calls:', functionCalls);
                 for (const call of functionCalls) {
                     const callId = randomUUID(); // CopilotKit needs an ID
                     activeToolCallIds.push(callId);
@@ -58,9 +59,17 @@ export async function* streamAgentResponse(
                         yield stateSnapshotEvent(currentState);
                     }
 
+                    console.log(`Server: Emitting tool call start for ${call.name} (${callId})`);
                     yield toolCallStartEvent(callId, call.name || 'unknown');
                     yield toolCallArgsEvent(callId, JSON.stringify(call.args));
                     yield toolCallEndEvent(callId);
+
+                    console.log(`Server: Emitting activity snapshot for tool call ${call.name} (${callId})`);
+                    // Use ACTIVITY_SNAPSHOT to render the tool call bubble
+                    yield activitySnapshotEvent(callId, "toolCall", {
+                        name: call.name,
+                        arguments: call.args
+                    });
                 }
             }
 
@@ -90,6 +99,10 @@ export async function* streamAgentResponse(
 
             const delta = stringifyContent(event);
             if (delta && delta.length > 0) {
+                if (!messageStarted) {
+                    yield textMessageStartEvent(messageId);
+                    messageStarted = true;
+                }
                 hasContent = true;
                 yield textMessageContentEvent(messageId, delta);
             }
@@ -99,7 +112,9 @@ export async function* streamAgentResponse(
             request.log.warn('No content was extracted from ADK events');
         }
 
-        yield textMessageEndEvent(messageId);
+        if (messageStarted) {
+            yield textMessageEndEvent(messageId);
+        }
         yield runFinishedEvent(threadId, runId);
 
     } catch (e: any) {
