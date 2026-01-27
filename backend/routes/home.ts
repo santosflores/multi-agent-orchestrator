@@ -5,6 +5,7 @@ import { randomUUID } from "crypto";
 import { ensureSession } from "../services/session";
 import { Readable } from "stream";
 import { stringifyContent, Event, getFunctionCalls, getFunctionResponses } from "@google/adk";
+import { AgentState, SHARED_STATE_KEYS } from "../types/agent";
 
 export function registerHomeRoute(fastify: FastifyInstance, runner: InMemoryRunner) {
     fastify.get('/', async (request) => {
@@ -71,7 +72,7 @@ async function* streamAgentResponse(
     const activeToolCallIds: string[] = [];
 
     // Maintain current state to support merging updates
-    const currentState: { current_date?: string; location?: string } = {
+    const currentState: AgentState = {
         current_date: currentDate
     };
 
@@ -90,11 +91,22 @@ async function* streamAgentResponse(
                     const callId = randomUUID(); // CopilotKit needs an ID
                     activeToolCallIds.push(callId);
 
-                    // Check for location in args to update shared state
-                    if (call.args && typeof call.args === 'object' && 'location' in call.args) {
-                        const newLocation = (call.args as any).location;
-                        if (newLocation && newLocation !== currentState.location) {
-                            currentState.location = newLocation;
+                    // Generic state update based on SHARED_STATE_KEYS
+                    // This creates an implicit binding: if a tool uses an argument name that matches a state key_
+                    // we update the shared state automatically.
+                    if (call.args && typeof call.args === 'object') {
+                        let stateUpdated = false;
+                        for (const key of SHARED_STATE_KEYS) {
+                            if (key in call.args) {
+                                const newValue = (call.args as any)[key];
+                                if (newValue && newValue !== currentState[key as keyof AgentState]) {
+                                    (currentState as any)[key] = newValue;
+                                    stateUpdated = true;
+                                }
+                            }
+                        }
+
+                        if (stateUpdated) {
                             yield stateSnapshotEvent(currentState);
                         }
                     }

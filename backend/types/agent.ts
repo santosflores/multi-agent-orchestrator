@@ -5,7 +5,8 @@ export interface ToolResponse<T = any> {
 }
 
 export interface AgentState {
-
-    // Metadata
+    location?: string;
     current_date?: string;
 }
+
+export const SHARED_STATE_KEYS = ['location', 'current_date'] as const;
