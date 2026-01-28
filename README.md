@@ -1,4 +1,26 @@
-# Multi-Agent Orchestrator
+# Multi-Agent Orchestrator Boilerplate
+
+**🚀 Ready-to-use boilerplate for building agentic applications.**
+
+## ⚡️ Quick Start
+
+1.  **Initialize the Project**:
+
+    ```bash
+    ./setup.sh
+    ```
+
+    This script sets up environment variables (from templates) and installs dependencies.
+
+2.  **Start Development**:
+    ```bash
+    make dev-backend  # In terminal 1
+    make dev-frontend # In terminal 2
+    ```
+
+---
+
+# Multi-Agent Orchestrator (Original Documentation)
 
 This project is a multi-agent orchestration platform composed of a Node.js backend (Fastify) and a Next.js frontend.
 
