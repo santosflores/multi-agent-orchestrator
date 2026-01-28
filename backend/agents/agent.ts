@@ -18,5 +18,7 @@ export const orchestratorAgent = new LlmAgent({
 });
 
 // Workaround for ADK issue: update rootAgent on sub-agents
+// This is required because the ADK InMemoryRunner currently expects sub-agents
+// to have a reference back to their parent orchestrator for certain orchestration flows.
 (weatherAgent as any).rootAgent = orchestratorAgent;
 (currentTimeAgent as any).rootAgent = orchestratorAgent;

@@ -38,10 +38,9 @@ export async function* streamAgentResponse(
         current_date: currentDate
     };
 
-    console.log(`[Stream] Initialized currentState from session ${session.id}:`, JSON.stringify(currentState));
+    request.log.info({ sessionId: session.id, currentState }, '[Stream] Initialized currentState');
 
     // Sync initial state back to session in case it was empty
-    // Object.assign(session.state, currentState); // Removed manual assignment
     await runner.sessionService.appendEvent({
         session,
         event: createEvent({
@@ -70,19 +69,17 @@ export async function* streamAgentResponse(
             // Handle Function Calls (Tool Calls)
             const functionCalls = getFunctionCalls(event);
             if (functionCalls.length > 0) {
-                request.log.info(JSON.stringify(functionCalls));
                 for (const call of functionCalls) {
                     const callId = randomUUID(); // CopilotKit needs an ID
                     activeToolCallIds.push(callId);
 
                     request.log.info({
-                        msg: "Processing tool call for state update",
+                        msg: "Processing tool call",
                         callName: call.name,
-                        argsType: typeof call.args,
-                        argsValue: call.args
+                        args: call.args
                     });
 
-                    if (updateSharedState(call.args, currentState)) {
+                    if (updateSharedState(call.args, currentState, request)) {
                         // Persist state change
                         await runner.sessionService.appendEvent({
                             session,
@@ -97,16 +94,14 @@ export async function* streamAgentResponse(
                                 }
                             })
                         });
-                        request.log.info({ state: currentState }, 'Server: Emitting updated state snapshot');
+                        request.log.info({ state: currentState }, 'Emitting updated state snapshot');
                         yield stateSnapshotEvent(currentState, threadId, runId);
                     }
 
-                    request.log.info(`Server: Emitting tool call start for ${call.name} (${callId})`);
                     yield toolCallStartEvent(callId, call.name || 'unknown');
                     yield toolCallArgsEvent(callId, JSON.stringify(call.args));
                     yield toolCallEndEvent(callId);
 
-                    request.log.info(`Server: Emitting activity snapshot for tool call ${call.name} (${callId})`);
                     // Use ACTIVITY_SNAPSHOT to render the tool call bubble
                     yield activitySnapshotEvent(callId, "toolCall", {
                         name: call.name,
@@ -126,7 +121,7 @@ export async function* streamAgentResponse(
                     const sources = [resp.response, (resp.response as any)?.data];
                     let stateUpdated = false;
                     for (const source of sources) {
-                        if (updateSharedState(source, currentState)) {
+                        if (updateSharedState(source, currentState, request)) {
                             stateUpdated = true;
                         }
                     }
@@ -188,42 +183,37 @@ export async function* streamAgentResponse(
  * Updates the shared state based on the provided source object.
  * Returns true if the state was updated, false otherwise.
  */
-function updateSharedState(source: unknown, currentState: AgentState): boolean {
-    console.log('[Stream] updateSharedState called with:', JSON.stringify(source));
-
+function updateSharedState(source: unknown, currentState: AgentState, request: FastifyRequest): boolean {
     let sourceObj = source;
 
     if (typeof source === 'string') {
         try {
             sourceObj = JSON.parse(source);
         } catch (e) {
-            console.log('[Stream] JSON parse failed for source:', source);
+            request.log.debug({ source }, 'JSON parse failed for source');
             return false;
         }
     }
 
     if (!sourceObj || typeof sourceObj !== 'object') {
-        console.log('[Stream] Source is not an object:', typeof sourceObj);
         return false;
     }
 
     let updated = false;
-    console.log('[Stream] Checking keys against:', SHARED_STATE_KEYS);
 
     for (const key of SHARED_STATE_KEYS) {
         if (key in sourceObj) {
             const newValue = (sourceObj as any)[key];
             const oldValue = currentState[key as keyof AgentState];
 
-            console.log(`[Stream] Found key '${key}'. New: ${newValue}, Old: ${oldValue}`);
-
             // Update if value is defined and different from current
             if (newValue !== undefined && newValue !== oldValue) {
                 (currentState as any)[key] = newValue;
                 updated = true;
-                console.log(`[Stream] State updated key '${key}' to:`, newValue);
+                request.log.info({ key, oldValue, newValue }, 'State updated');
             }
         }
     }
     return updated;
 }
+
