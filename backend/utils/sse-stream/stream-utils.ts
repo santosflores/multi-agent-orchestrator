@@ -1,6 +1,6 @@
 import { FastifyRequest } from "fastify";
 import { randomUUID } from "crypto";
-import { Event, stringifyContent, getFunctionCalls, getFunctionResponses } from "@google/adk";
+import { Event, stringifyContent, getFunctionCalls, getFunctionResponses, logger } from "@google/adk";
 import { AgentState, SHARED_STATE_KEYS } from "../../types/agent";
 import {
     runStartedEvent,
@@ -64,7 +64,7 @@ export async function* streamAgentResponse(
                     yield toolCallArgsEvent(callId, JSON.stringify(call.args));
                     yield toolCallEndEvent(callId);
 
-                    console.log(`Server: Emitting activity snapshot for tool call ${call.name} (${callId})`);
+                    logger.info(`Server: Emitting activity snapshot for tool call ${call.name} (${callId})`);
                     // Use ACTIVITY_SNAPSHOT to render the tool call bubble
                     yield activitySnapshotEvent(callId, "toolCall", {
                         name: call.name,
