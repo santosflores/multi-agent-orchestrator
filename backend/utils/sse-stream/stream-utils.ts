@@ -56,7 +56,7 @@ export async function* streamAgentResponse(
         })
     });
 
-    yield stateSnapshotEvent(currentState);
+    yield stateSnapshotEvent(currentState, threadId, runId);
 
     // Store active tool call IDs to match starts with results (FIFO assumption)
     const activeToolCallIds: string[] = [];
@@ -91,7 +91,7 @@ export async function* streamAgentResponse(
                             })
                         });
                         request.log.info({ state: currentState }, 'Server: Emitting updated state snapshot');
-                        yield stateSnapshotEvent(currentState);
+                        yield stateSnapshotEvent(currentState, threadId, runId);
                     }
 
                     request.log.info(`Server: Emitting tool call start for ${call.name} (${callId})`);
@@ -139,7 +139,7 @@ export async function* streamAgentResponse(
                                 }
                             })
                         });
-                        yield stateSnapshotEvent(currentState);
+                        yield stateSnapshotEvent(currentState, threadId, runId);
                     }
 
                     yield toolCallResultEvent(toolResultMessageId, callId, JSON.stringify(resp.response));

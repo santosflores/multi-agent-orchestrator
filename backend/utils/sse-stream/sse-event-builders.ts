@@ -66,10 +66,12 @@ export function runFinishedEvent(threadId: string, runId: string): string {
 /**
  * Creates a STATE_SNAPSHOT SSE event.
  */
-export function stateSnapshotEvent(snapshot: AgentState): string {
+export function stateSnapshotEvent(snapshot: AgentState, threadId?: string, runId?: string): string {
     return sseEvent({
         type: EventType.STATE_SNAPSHOT,
-        snapshot
+        snapshot,
+        ...(threadId ? { threadId } : {}),
+        ...(runId ? { runId } : {})
     });
 }
 
