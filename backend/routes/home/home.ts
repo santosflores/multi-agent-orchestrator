@@ -1,9 +1,9 @@
 import { InMemoryRunner } from "@google/adk";
 import { FastifyInstance, FastifyRequest } from "fastify";
-import { extractPrompt } from "../utils";
-import { ensureSession } from "../services/session";
+import { extractPrompt } from "../../utils";
+import { ensureSession } from "../../services/session";
 import { Readable } from "stream";
-import { streamAgentResponse } from "../utils";
+import { streamAgentResponse } from "../../utils";
 
 export function registerHomeRoute(fastify: FastifyInstance, runner: InMemoryRunner) {
     fastify.get('/', async (request) => {

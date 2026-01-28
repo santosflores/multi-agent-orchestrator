@@ -4,7 +4,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { InMemoryRunner } from '@google/adk';
 
 // Mock dependencies
-vi.mock('../services/session', () => ({
+vi.mock('../../services/session', () => ({
     ensureSession: vi.fn().mockResolvedValue({
         id: 'mock-session-id',
         userId: 'mock-user-id',
@@ -18,7 +18,7 @@ vi.mock('crypto', () => ({
         .mockReturnValueOnce('mock-run-id')
 }));
 
-import { ensureSession } from '../services/session';
+import { ensureSession } from '../../services/session';
 
 // Helper to create mock Fastify instance
 function createMockFastify() {
