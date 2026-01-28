@@ -40,6 +40,7 @@ describe('streamAgentResponse', () => {
         };
 
         mockRunner = {
+            agent: { name: 'test-agent' },
             sessionService: {
                 appendEvent: vi.fn().mockResolvedValue({} as Event)
             }
@@ -72,11 +73,12 @@ describe('streamAgentResponse', () => {
         const generator = streamAgentResponse(emptyIter, 'thread-1', mockRequest, mockSession, mockRunner);
         const events = await collectStream(generator);
 
-        // Expect: Start, Snapshot, RunFinished. No TextStart, No TextEnd.
-        expect(events.length).toBe(3);
+        // Expect: Start, Initial Snapshot, Final Snapshot, RunFinished.
+        expect(events.length).toBe(4);
         expect(events[0].type).toBe('RUN_STARTED');
         expect(events[1].type).toBe('STATE_SNAPSHOT');
-        expect(events[2].type).toBe('RUN_FINISHED');
+        expect(events[2].type).toBe('STATE_SNAPSHOT');
+        expect(events[3].type).toBe('RUN_FINISHED');
     });
 
     it('should emit text content events', async () => {
@@ -104,7 +106,8 @@ describe('streamAgentResponse', () => {
         expect(events[4].delta).toBe(' World');
 
         expect(events[5].type).toBe('TEXT_MESSAGE_END');
-        expect(events[6].type).toBe('RUN_FINISHED');
+        expect(events[6].type).toBe('STATE_SNAPSHOT');
+        expect(events[7].type).toBe('RUN_FINISHED');
     });
 
     it('should update state from tool calls', async () => {

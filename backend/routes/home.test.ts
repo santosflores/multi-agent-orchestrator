@@ -39,6 +39,7 @@ function createMockFastify() {
 function createMockRunner(events: AsyncIterable<unknown> = emptyAsyncIterable()): InMemoryRunner {
     return {
         appName: 'test-app',
+        agent: { name: 'test-agent' },
         runAsync: vi.fn().mockReturnValue(events),
         sessionService: {
             createSession: vi.fn().mockResolvedValue({ id: 'new-session' }),
@@ -268,14 +269,15 @@ describe('registerHomeRoute', () => {
             const stream = mockReply.send.mock.calls[0]![0];
             const chunks = await consumeStream(stream);
 
-            // Should have: RUN_STARTED, STATE_SNAPSHOT, RUN_FINISHED
+            // Should have: RUN_STARTED, STATE_SNAPSHOT (initial), STATE_SNAPSHOT (final), RUN_FINISHED
             // TEXT_MESSAGE_START/END are skipped because no content is yielded
-            expect(chunks).toHaveLength(3);
+            expect(chunks).toHaveLength(4);
 
             // Verify event types in order
             expect(chunks[0]).toContain('"type":"RUN_STARTED"');
             expect(chunks[1]).toContain('"type":"STATE_SNAPSHOT"');
-            expect(chunks[2]).toContain('"type":"RUN_FINISHED"');
+            expect(chunks[2]).toContain('"type":"STATE_SNAPSHOT"');
+            expect(chunks[3]).toContain('"type":"RUN_FINISHED"');
         });
 
         it('logs warning when no content extracted', async () => {

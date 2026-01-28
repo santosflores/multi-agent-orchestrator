@@ -3,11 +3,11 @@ import { orchestratorAgent } from './agent';
 
 describe('orchestratorAgent', () => {
     it('has the correct name', () => {
-        expect(orchestratorAgent.name).toBe('orchestrator');
+        expect(orchestratorAgent.name).toBe('default');
     });
 
-    it('uses gemini-3-flash-preview model', () => {
-        expect(orchestratorAgent.model).toBe('gemini-3-flash-preview');
+    it('uses the configured model', () => {
+        expect(orchestratorAgent.model).toBe('gemini-2.0-flash-exp');
     });
 
     it('has no tools configured', () => {
