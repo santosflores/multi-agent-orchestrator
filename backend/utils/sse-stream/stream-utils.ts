@@ -46,7 +46,7 @@ export async function* streamAgentResponse(
         session,
         event: createEvent({
             invocationId: runId,
-            author: 'system',
+            author: 'default',
             actions: {
                 stateDelta: currentState,
                 artifactDelta: {},
@@ -75,13 +75,20 @@ export async function* streamAgentResponse(
                     const callId = randomUUID(); // CopilotKit needs an ID
                     activeToolCallIds.push(callId);
 
+                    request.log.info({
+                        msg: "Processing tool call for state update",
+                        callName: call.name,
+                        argsType: typeof call.args,
+                        argsValue: call.args
+                    });
+
                     if (updateSharedState(call.args, currentState)) {
                         // Persist state change
                         await runner.sessionService.appendEvent({
                             session,
                             event: createEvent({
                                 invocationId: runId,
-                                author: 'system',
+                                author: 'default',
                                 actions: {
                                     stateDelta: currentState,
                                     artifactDelta: {},
@@ -130,7 +137,7 @@ export async function* streamAgentResponse(
                             session,
                             event: createEvent({
                                 invocationId: runId,
-                                author: 'system',
+                                author: 'default',
                                 actions: {
                                     stateDelta: currentState,
                                     artifactDelta: {},
@@ -164,6 +171,10 @@ export async function* streamAgentResponse(
         if (messageStarted) {
             yield textMessageEndEvent(messageId);
         }
+
+        // Ensure final state is synchronized before finishing run
+        yield stateSnapshotEvent(currentState, threadId, runId);
+
         yield runFinishedEvent(threadId, runId);
 
     } catch (e: any) {
@@ -178,18 +189,39 @@ export async function* streamAgentResponse(
  * Returns true if the state was updated, false otherwise.
  */
 function updateSharedState(source: unknown, currentState: AgentState): boolean {
-    if (!source || typeof source !== 'object') {
+    console.log('[Stream] updateSharedState called with:', JSON.stringify(source));
+
+    let sourceObj = source;
+
+    if (typeof source === 'string') {
+        try {
+            sourceObj = JSON.parse(source);
+        } catch (e) {
+            console.log('[Stream] JSON parse failed for source:', source);
+            return false;
+        }
+    }
+
+    if (!sourceObj || typeof sourceObj !== 'object') {
+        console.log('[Stream] Source is not an object:', typeof sourceObj);
         return false;
     }
 
     let updated = false;
+    console.log('[Stream] Checking keys against:', SHARED_STATE_KEYS);
+
     for (const key of SHARED_STATE_KEYS) {
-        if (key in source) {
-            const newValue = (source as any)[key];
+        if (key in sourceObj) {
+            const newValue = (sourceObj as any)[key];
+            const oldValue = currentState[key as keyof AgentState];
+
+            console.log(`[Stream] Found key '${key}'. New: ${newValue}, Old: ${oldValue}`);
+
             // Update if value is defined and different from current
-            if (newValue !== undefined && newValue !== currentState[key as keyof AgentState]) {
+            if (newValue !== undefined && newValue !== oldValue) {
                 (currentState as any)[key] = newValue;
                 updated = true;
+                console.log(`[Stream] State updated key '${key}' to:`, newValue);
             }
         }
     }

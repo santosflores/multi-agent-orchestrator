@@ -7,6 +7,7 @@ import { registerHomeRoute } from './routes/home';
 setLogLevel(LogLevel.INFO);
 
 const runner = new InMemoryRunner({
+    appName: 'default',
     agent: orchestratorAgent,
     plugins: [new LoggingPlugin()],
 });
