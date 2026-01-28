@@ -1,6 +1,6 @@
 import { FastifyRequest } from "fastify";
 import { randomUUID } from "crypto";
-import { Event, stringifyContent, getFunctionCalls, getFunctionResponses, Session } from "@google/adk";
+import { Event, stringifyContent, getFunctionCalls, getFunctionResponses, Session, InMemoryRunner, createEvent } from "@google/adk";
 import { AgentState, SHARED_STATE_KEYS } from "../../types/agent";
 import {
     runStartedEvent,
@@ -21,7 +21,8 @@ export async function* streamAgentResponse(
     result: AsyncIterable<Event>,
     threadId: string,
     request: FastifyRequest,
-    session: Session
+    session: Session,
+    runner: InMemoryRunner
 ): AsyncGenerator<string> {
     const messageId = randomUUID();
     const runId = randomUUID();
@@ -37,8 +38,23 @@ export async function* streamAgentResponse(
         current_date: currentDate
     };
 
+    console.log(`[Stream] Initialized currentState from session ${session.id}:`, JSON.stringify(currentState));
+
     // Sync initial state back to session in case it was empty
-    Object.assign(session.state, currentState);
+    // Object.assign(session.state, currentState); // Removed manual assignment
+    await runner.sessionService.appendEvent({
+        session,
+        event: createEvent({
+            invocationId: runId,
+            author: 'system',
+            actions: {
+                stateDelta: currentState,
+                artifactDelta: {},
+                requestedAuthConfigs: {},
+                requestedToolConfirmations: {}
+            }
+        })
+    });
 
     yield stateSnapshotEvent(currentState);
 
@@ -60,7 +76,20 @@ export async function* streamAgentResponse(
                     activeToolCallIds.push(callId);
 
                     if (updateSharedState(call.args, currentState)) {
-                        Object.assign(session.state, currentState);
+                        // Persist state change
+                        await runner.sessionService.appendEvent({
+                            session,
+                            event: createEvent({
+                                invocationId: runId,
+                                author: 'system',
+                                actions: {
+                                    stateDelta: currentState,
+                                    artifactDelta: {},
+                                    requestedAuthConfigs: {},
+                                    requestedToolConfirmations: {}
+                                }
+                            })
+                        });
                         yield stateSnapshotEvent(currentState);
                     }
 
@@ -95,7 +124,20 @@ export async function* streamAgentResponse(
                     }
 
                     if (stateUpdated) {
-                        Object.assign(session.state, currentState);
+                        // Persist state change
+                        await runner.sessionService.appendEvent({
+                            session,
+                            event: createEvent({
+                                invocationId: runId,
+                                author: 'system',
+                                actions: {
+                                    stateDelta: currentState,
+                                    artifactDelta: {},
+                                    requestedAuthConfigs: {},
+                                    requestedToolConfirmations: {}
+                                }
+                            })
+                        });
                         yield stateSnapshotEvent(currentState);
                     }
 

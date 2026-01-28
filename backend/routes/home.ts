@@ -33,7 +33,7 @@ export function registerHomeRoute(fastify: FastifyInstance, runner: InMemoryRunn
                 },
             });
 
-            const stream = Readable.from(streamAgentResponse(result, sessionId, request, session));
+            const stream = Readable.from(streamAgentResponse(result, sessionId, request, session, runner));
 
             return reply
                 .header('Content-Type', 'text/event-stream')

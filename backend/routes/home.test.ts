@@ -41,7 +41,8 @@ function createMockRunner(events: AsyncIterable<unknown> = emptyAsyncIterable())
         appName: 'test-app',
         runAsync: vi.fn().mockReturnValue(events),
         sessionService: {
-            createSession: vi.fn().mockResolvedValue({ id: 'new-session' })
+            createSession: vi.fn().mockResolvedValue({ id: 'new-session' }),
+            appendEvent: vi.fn().mockResolvedValue({})
         }
     } as unknown as InMemoryRunner;
 }

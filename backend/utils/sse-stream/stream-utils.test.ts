@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { streamAgentResponse } from './stream-utils';
 import { FastifyRequest } from 'fastify';
-import { Event, stringifyContent, getFunctionCalls, getFunctionResponses, Session } from '@google/adk';
+import { FastifyRequest } from 'fastify';
+import { Event, stringifyContent, getFunctionCalls, getFunctionResponses, Session, InMemoryRunner } from '@google/adk';
 
 // Mocks
 vi.mock('crypto', () => ({
@@ -11,12 +12,15 @@ vi.mock('crypto', () => ({
 vi.mock('@google/adk', () => ({
     stringifyContent: vi.fn().mockReturnValue(''),
     getFunctionCalls: vi.fn().mockReturnValue([]),
-    getFunctionResponses: vi.fn().mockReturnValue([])
+    getFunctionResponses: vi.fn().mockReturnValue([]),
+    createEvent: vi.fn().mockImplementation((params) => params), // Mock implementation
+    InMemoryRunner: vi.fn(), // Mock constructor if needed
 }));
 
 describe('streamAgentResponse', () => {
     let mockRequest: FastifyRequest;
     let mockSession: Session;
+    let mockRunner: InMemoryRunner;
 
     beforeEach(() => {
         mockRequest = {
@@ -35,6 +39,13 @@ describe('streamAgentResponse', () => {
             userId: 'user-1',
             events: []
         };
+
+        mockRunner = {
+            sessionService: {
+                appendEvent: vi.fn().mockResolvedValue({} as Event)
+            }
+        } as unknown as InMemoryRunner;
+
         vi.clearAllMocks();
         (stringifyContent as Mock).mockReturnValue('');
         (getFunctionCalls as Mock).mockReturnValue([]);
@@ -59,7 +70,7 @@ describe('streamAgentResponse', () => {
             [Symbol.asyncIterator]: async function* () { }
         };
 
-        const generator = streamAgentResponse(emptyIter, 'thread-1', mockRequest, mockSession);
+        const generator = streamAgentResponse(emptyIter, 'thread-1', mockRequest, mockSession, mockRunner);
         const events = await collectStream(generator);
 
         // Expect: Start, Snapshot, RunFinished. No TextStart, No TextEnd.
@@ -79,7 +90,7 @@ describe('streamAgentResponse', () => {
 
         (stringifyContent as Mock).mockReturnValueOnce('Hello').mockReturnValueOnce(' World');
 
-        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest, mockSession);
+        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest, mockSession, mockRunner);
         const events = await collectStream(generator);
 
         // Verify full sequence
@@ -111,7 +122,7 @@ describe('streamAgentResponse', () => {
             }
         };
 
-        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest, mockSession);
+        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest, mockSession, mockRunner);
         const events = await collectStream(generator);
 
         const snapshotEvents = events.filter(e => e.type === 'STATE_SNAPSHOT');
@@ -119,7 +130,7 @@ describe('streamAgentResponse', () => {
 
         const lastSnapshot = snapshotEvents[snapshotEvents.length - 1];
         expect(lastSnapshot.snapshot.location).toBe('New York');
-        expect(mockSession.state.location).toBe('New York'); // Verify session update
+        expect(mockRunner.sessionService.appendEvent).toHaveBeenCalled(); // Verify persistence
     });
 
     it('should update state from tool results (direct response)', async () => {
@@ -147,7 +158,7 @@ describe('streamAgentResponse', () => {
             }
         };
 
-        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest, mockSession);
+        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest, mockSession, mockRunner);
         const events = await collectStream(generator);
 
         const snapshotEvents = events.filter(e => e.type === 'STATE_SNAPSHOT');
@@ -178,7 +189,7 @@ describe('streamAgentResponse', () => {
             }
         };
 
-        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest, mockSession);
+        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest, mockSession, mockRunner);
         const events = await collectStream(generator);
 
         const snapshotEvents = events.filter(e => e.type === 'STATE_SNAPSHOT');
@@ -193,7 +204,7 @@ describe('streamAgentResponse', () => {
             }
         };
 
-        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest, mockSession);
+        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest, mockSession, mockRunner);
         const events = await collectStream(generator);
 
         const errorEvent = events.find(e => e.type === 'RUN_ERROR');
@@ -209,7 +220,7 @@ describe('streamAgentResponse', () => {
 
         mockSession.state = { location: 'Paris' };
 
-        const generator = streamAgentResponse(emptyIter, 'thread-1', mockRequest, mockSession);
+        const generator = streamAgentResponse(emptyIter, 'thread-1', mockRequest, mockSession, mockRunner);
         const events = await collectStream(generator);
 
         expect(events[1].type).toBe('STATE_SNAPSHOT');

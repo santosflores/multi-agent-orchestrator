@@ -22,6 +22,7 @@ export async function ensureSession(
                 sessionId
             });
             if (existing) {
+                console.log(`[Session] Found existing session: ${sessionId} with state:`, JSON.stringify(existing.state));
                 return existing;
             }
         } catch {
