@@ -1,25 +1,27 @@
 import { FastifyRequest } from "fastify";
 import { randomUUID } from "crypto";
-import { Event, stringifyContent, getFunctionCalls, getFunctionResponses } from "@google/adk";
+import { Event, stringifyContent, getFunctionCalls, getFunctionResponses, Session } from "@google/adk";
 import { AgentState, SHARED_STATE_KEYS } from "../../types/agent";
 import {
     runStartedEvent,
     stateSnapshotEvent,
     textMessageStartEvent,
-    toolCallStartEvent,
+    toolCallStartEvent, // Keep strict imports if needed elsewhere, or remove
     toolCallArgsEvent,
     toolCallEndEvent,
     toolCallResultEvent,
     textMessageContentEvent,
     textMessageEndEvent,
     runFinishedEvent,
-    runErrorEvent
+    runErrorEvent,
+    activitySnapshotEvent
 } from "../../utils";
 
 export async function* streamAgentResponse(
     result: AsyncIterable<Event>,
     threadId: string,
-    request: FastifyRequest
+    request: FastifyRequest,
+    session: Session
 ): AsyncGenerator<string> {
     const messageId = randomUUID();
     const runId = randomUUID();
@@ -28,21 +30,23 @@ export async function* streamAgentResponse(
 
     // Send initial state
     const currentDate = new Date().toISOString();
-    yield stateSnapshotEvent({
-        current_date: currentDate
-    });
 
-    yield textMessageStartEvent(messageId);
+    // Maintain current state to support merging updates
+    const currentState: AgentState = {
+        ...(session.state as unknown as AgentState),
+        current_date: currentDate
+    };
+
+    // Sync initial state back to session in case it was empty
+    Object.assign(session.state, currentState);
+
+    yield stateSnapshotEvent(currentState);
 
     // Store active tool call IDs to match starts with results (FIFO assumption)
     const activeToolCallIds: string[] = [];
 
-    // Maintain current state to support merging updates
-    const currentState: AgentState = {
-        current_date: currentDate
-    };
-
     let hasContent = false;
+    let messageStarted = false;
 
     try {
         for await (const event of result) {
@@ -50,17 +54,27 @@ export async function* streamAgentResponse(
             // Handle Function Calls (Tool Calls)
             const functionCalls = getFunctionCalls(event);
             if (functionCalls.length > 0) {
+                request.log.info(JSON.stringify(functionCalls));
                 for (const call of functionCalls) {
                     const callId = randomUUID(); // CopilotKit needs an ID
                     activeToolCallIds.push(callId);
 
                     if (updateSharedState(call.args, currentState)) {
+                        Object.assign(session.state, currentState);
                         yield stateSnapshotEvent(currentState);
                     }
 
+                    request.log.info(`Server: Emitting tool call start for ${call.name} (${callId})`);
                     yield toolCallStartEvent(callId, call.name || 'unknown');
                     yield toolCallArgsEvent(callId, JSON.stringify(call.args));
                     yield toolCallEndEvent(callId);
+
+                    request.log.info(`Server: Emitting activity snapshot for tool call ${call.name} (${callId})`);
+                    // Use ACTIVITY_SNAPSHOT to render the tool call bubble
+                    yield activitySnapshotEvent(callId, "toolCall", {
+                        name: call.name,
+                        arguments: call.args
+                    });
                 }
             }
 
@@ -81,6 +95,7 @@ export async function* streamAgentResponse(
                     }
 
                     if (stateUpdated) {
+                        Object.assign(session.state, currentState);
                         yield stateSnapshotEvent(currentState);
                     }
 
@@ -90,6 +105,10 @@ export async function* streamAgentResponse(
 
             const delta = stringifyContent(event);
             if (delta && delta.length > 0) {
+                if (!messageStarted) {
+                    yield textMessageStartEvent(messageId);
+                    messageStarted = true;
+                }
                 hasContent = true;
                 yield textMessageContentEvent(messageId, delta);
             }
@@ -99,7 +118,9 @@ export async function* streamAgentResponse(
             request.log.warn('No content was extracted from ADK events');
         }
 
-        yield textMessageEndEvent(messageId);
+        if (messageStarted) {
+            yield textMessageEndEvent(messageId);
+        }
         yield runFinishedEvent(threadId, runId);
 
     } catch (e: any) {

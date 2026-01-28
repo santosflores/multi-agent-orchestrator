@@ -21,7 +21,8 @@ export function registerHomeRoute(fastify: FastifyInstance, runner: InMemoryRunn
             const inputSessionId = typeof body.threadId === 'string' ? body.threadId : undefined;
             const inputUserId = typeof body.userId === 'string' ? body.userId : undefined;
 
-            const { sessionId, userId } = await ensureSession(runner, inputSessionId, inputUserId);
+            const session = await ensureSession(runner, inputSessionId, inputUserId);
+            const { id: sessionId, userId } = session;
 
             const result = runner.runAsync({
                 userId,
@@ -32,7 +33,7 @@ export function registerHomeRoute(fastify: FastifyInstance, runner: InMemoryRunn
                 },
             });
 
-            const stream = Readable.from(streamAgentResponse(result, sessionId, request));
+            const stream = Readable.from(streamAgentResponse(result, sessionId, request, session));
 
             return reply
                 .header('Content-Type', 'text/event-stream')

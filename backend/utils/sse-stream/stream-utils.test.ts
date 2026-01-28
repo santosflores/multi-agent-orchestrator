@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { streamAgentResponse } from './stream-utils';
 import { FastifyRequest } from 'fastify';
-import { Event, stringifyContent, getFunctionCalls, getFunctionResponses } from '@google/adk';
+import { Event, stringifyContent, getFunctionCalls, getFunctionResponses, Session } from '@google/adk';
 
 // Mocks
 vi.mock('crypto', () => ({
@@ -16,14 +16,25 @@ vi.mock('@google/adk', () => ({
 
 describe('streamAgentResponse', () => {
     let mockRequest: FastifyRequest;
+    let mockSession: Session;
 
     beforeEach(() => {
         mockRequest = {
             log: {
                 warn: vi.fn(),
                 error: vi.fn(),
+                info: vi.fn(), // Added info mock
             }
         } as unknown as FastifyRequest;
+
+        mockSession = {
+            id: 'session-1',
+            state: {},
+            lastUpdateTime: 0,
+            appName: 'test',
+            userId: 'user-1',
+            events: []
+        };
         vi.clearAllMocks();
         (stringifyContent as Mock).mockReturnValue('');
         (getFunctionCalls as Mock).mockReturnValue([]);
@@ -43,18 +54,19 @@ describe('streamAgentResponse', () => {
         return events;
     }
 
-    it('should emit initial events run_started, state_snapshot, text_message_start', async () => {
+    it('should emit initial events run_started, state_snapshot but NOT text_message_start if no text', async () => {
         const emptyIter: AsyncIterable<Event> = {
             [Symbol.asyncIterator]: async function* () { }
         };
 
-        const generator = streamAgentResponse(emptyIter, 'thread-1', mockRequest);
+        const generator = streamAgentResponse(emptyIter, 'thread-1', mockRequest, mockSession);
         const events = await collectStream(generator);
 
-        expect(events.length).toBeGreaterThanOrEqual(4); // Start, Snapshot, MsgStart, MsgEnd, RunFinished
+        // Expect: Start, Snapshot, RunFinished. No TextStart, No TextEnd.
+        expect(events.length).toBe(3);
         expect(events[0].type).toBe('RUN_STARTED');
         expect(events[1].type).toBe('STATE_SNAPSHOT');
-        expect(events[2].type).toBe('TEXT_MESSAGE_START');
+        expect(events[2].type).toBe('RUN_FINISHED');
     });
 
     it('should emit text content events', async () => {
@@ -67,13 +79,22 @@ describe('streamAgentResponse', () => {
 
         (stringifyContent as Mock).mockReturnValueOnce('Hello').mockReturnValueOnce(' World');
 
-        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest);
+        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest, mockSession);
         const events = await collectStream(generator);
 
-        const contentEvents = events.filter(e => e.type === 'TEXT_MESSAGE_CONTENT');
-        expect(contentEvents).toHaveLength(2);
-        expect(contentEvents[0].delta).toBe('Hello');
-        expect(contentEvents[1].delta).toBe(' World');
+        // Verify full sequence
+        expect(events[0].type).toBe('RUN_STARTED');
+        expect(events[1].type).toBe('STATE_SNAPSHOT');
+        expect(events[2].type).toBe('TEXT_MESSAGE_START');
+
+        expect(events[3].type).toBe('TEXT_MESSAGE_CONTENT');
+        expect(events[3].delta).toBe('Hello');
+
+        expect(events[4].type).toBe('TEXT_MESSAGE_CONTENT');
+        expect(events[4].delta).toBe(' World');
+
+        expect(events[5].type).toBe('TEXT_MESSAGE_END');
+        expect(events[6].type).toBe('RUN_FINISHED');
     });
 
     it('should update state from tool calls', async () => {
@@ -90,7 +111,7 @@ describe('streamAgentResponse', () => {
             }
         };
 
-        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest);
+        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest, mockSession);
         const events = await collectStream(generator);
 
         const snapshotEvents = events.filter(e => e.type === 'STATE_SNAPSHOT');
@@ -98,6 +119,7 @@ describe('streamAgentResponse', () => {
 
         const lastSnapshot = snapshotEvents[snapshotEvents.length - 1];
         expect(lastSnapshot.snapshot.location).toBe('New York');
+        expect(mockSession.state.location).toBe('New York'); // Verify session update
     });
 
     it('should update state from tool results (direct response)', async () => {
@@ -125,7 +147,7 @@ describe('streamAgentResponse', () => {
             }
         };
 
-        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest);
+        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest, mockSession);
         const events = await collectStream(generator);
 
         const snapshotEvents = events.filter(e => e.type === 'STATE_SNAPSHOT');
@@ -156,7 +178,7 @@ describe('streamAgentResponse', () => {
             }
         };
 
-        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest);
+        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest, mockSession);
         const events = await collectStream(generator);
 
         const snapshotEvents = events.filter(e => e.type === 'STATE_SNAPSHOT');
@@ -171,12 +193,26 @@ describe('streamAgentResponse', () => {
             }
         };
 
-        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest);
+        const generator = streamAgentResponse(mockIter, 'thread-1', mockRequest, mockSession);
         const events = await collectStream(generator);
 
         const errorEvent = events.find(e => e.type === 'RUN_ERROR');
         expect(errorEvent).toBeDefined();
         expect(errorEvent.message).toBe('Test Error');
         expect(mockRequest.log.error).toHaveBeenCalled();
+    }); // End existing tests
+
+    it('should respect initial state from session', async () => {
+        const emptyIter: AsyncIterable<Event> = {
+            [Symbol.asyncIterator]: async function* () { }
+        };
+
+        mockSession.state = { location: 'Paris' };
+
+        const generator = streamAgentResponse(emptyIter, 'thread-1', mockRequest, mockSession);
+        const events = await collectStream(generator);
+
+        expect(events[1].type).toBe('STATE_SNAPSHOT');
+        expect(events[1].snapshot.location).toBe('Paris');
     });
 });

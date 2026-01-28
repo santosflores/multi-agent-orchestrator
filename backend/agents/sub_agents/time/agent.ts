@@ -1,4 +1,4 @@
-import { FunctionTool, LlmAgent } from "@google/adk";
+import { FunctionTool, LlmAgent, } from "@google/adk";
 import { ToolResponse } from "../../../types/agent";
 import { z } from "zod";
 import { AGENT_MODEL } from "../../../config/agent";
@@ -18,7 +18,6 @@ const AGENT_INSTRUCTION = 'You are a time agent that can get the current time in
  * @returns The current time in the given location
  */
 export const getCurrentTimeHandler = ({ location }: { location: string }): ToolResponse => {
-    console.log('Resolving current time for location:', location);
 
     // Try to find the city in the timezone database
     // Handle formats like "Monterrey, MX" or "Tokyo"
@@ -70,7 +69,7 @@ export const getCurrentTimeTool = new FunctionTool({
     parameters: z.object({
         location: z.string().describe('The location to get the time for'),
     }),
-    execute: getCurrentTimeHandler
+    execute: getCurrentTimeHandler,
 });
 
 /**
@@ -82,6 +81,7 @@ export const currentTimeAgent = new LlmAgent({
     model: AGENT_MODEL,
     description: AGENT_DESCRIPTION,
     instruction: AGENT_INSTRUCTION,
-    tools: [getCurrentTimeTool]
+    tools: [getCurrentTimeTool],
+    outputKey: 'time'
 });
 

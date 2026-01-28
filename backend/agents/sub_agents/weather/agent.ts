@@ -106,5 +106,6 @@ export const weatherAgent = new LlmAgent({
     model: AGENT_MODEL,
     description: AGENT_DESCRIPTION,
     instruction: AGENT_INSTRUCTION,
-    tools: [getCurrentWeatherTool]
+    tools: [getCurrentWeatherTool],
+    outputKey: 'weather'
 });
