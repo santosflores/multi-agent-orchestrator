@@ -5,5 +5,9 @@ export default defineConfig({
         globals: true,
         environment: 'node',
         include: ['**/*.test.ts'],
+        env: {
+            GEMINI_API_KEY: 'dummy-key-for-tests',
+            GOOGLE_CLOUD_PROJECT: 'test-project'
+        }
     },
 });
