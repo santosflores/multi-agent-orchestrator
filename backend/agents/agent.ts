@@ -3,7 +3,7 @@ import { weatherAgent } from './sub_agents/weather/agent';
 import { currentTimeAgent } from './sub_agents/time/agent';
 import { AGENT_MODEL } from '../config/agent';
 
-const AGENT_NAME = 'orchestrator';
+const AGENT_NAME = 'default';
 const AGENT_DESCRIPTION = 'Orchestrator agent';
 const AGENT_INSTRUCTION = `You are an orchestrator agent that can delegate tasks to subagents. 
                   Delegate weather related tasks to the weather agent and time related 

@@ -38,7 +38,7 @@ vi.mock('dotenv', () => ({
 }));
 
 // Import after mocking
-import { POST } from './route';
+import { POST } from './[[...handle]]/route';
 import { copilotRuntimeNextJSAppRouterEndpoint } from '@copilotkit/runtime';
 
 const DISCOVERY_URL = 'http://localhost/api/copilotkit';
