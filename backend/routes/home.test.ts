@@ -7,7 +7,8 @@ import { InMemoryRunner } from '@google/adk';
 vi.mock('../services/session', () => ({
     ensureSession: vi.fn().mockResolvedValue({
         id: 'mock-session-id',
-        userId: 'mock-user-id'
+        userId: 'mock-user-id',
+        state: {} // Added state to mock
     })
 }));
 

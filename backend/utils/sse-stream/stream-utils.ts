@@ -1,6 +1,6 @@
 import { FastifyRequest } from "fastify";
 import { randomUUID } from "crypto";
-import { Event, stringifyContent, getFunctionCalls, getFunctionResponses, logger } from "@google/adk";
+import { Event, stringifyContent, getFunctionCalls, getFunctionResponses, Session } from "@google/adk";
 import { AgentState, SHARED_STATE_KEYS } from "../../types/agent";
 import {
     runStartedEvent,
@@ -20,7 +20,8 @@ import {
 export async function* streamAgentResponse(
     result: AsyncIterable<Event>,
     threadId: string,
-    request: FastifyRequest
+    request: FastifyRequest,
+    session: Session
 ): AsyncGenerator<string> {
     const messageId = randomUUID();
     const runId = randomUUID();
@@ -29,17 +30,20 @@ export async function* streamAgentResponse(
 
     // Send initial state
     const currentDate = new Date().toISOString();
-    yield stateSnapshotEvent({
-        current_date: currentDate
-    });
-
-    // Store active tool call IDs to match starts with results (FIFO assumption)
-    const activeToolCallIds: string[] = [];
 
     // Maintain current state to support merging updates
     const currentState: AgentState = {
+        ...(session.state as unknown as AgentState),
         current_date: currentDate
     };
+
+    // Sync initial state back to session in case it was empty
+    Object.assign(session.state, currentState);
+
+    yield stateSnapshotEvent(currentState);
+
+    // Store active tool call IDs to match starts with results (FIFO assumption)
+    const activeToolCallIds: string[] = [];
 
     let hasContent = false;
     let messageStarted = false;
@@ -50,21 +54,22 @@ export async function* streamAgentResponse(
             // Handle Function Calls (Tool Calls)
             const functionCalls = getFunctionCalls(event);
             if (functionCalls.length > 0) {
-                console.log('Server: Detected function calls:', functionCalls);
+                request.log.info(JSON.stringify(functionCalls));
                 for (const call of functionCalls) {
                     const callId = randomUUID(); // CopilotKit needs an ID
                     activeToolCallIds.push(callId);
 
                     if (updateSharedState(call.args, currentState)) {
+                        Object.assign(session.state, currentState);
                         yield stateSnapshotEvent(currentState);
                     }
 
-                    console.log(`Server: Emitting tool call start for ${call.name} (${callId})`);
+                    request.log.info(`Server: Emitting tool call start for ${call.name} (${callId})`);
                     yield toolCallStartEvent(callId, call.name || 'unknown');
                     yield toolCallArgsEvent(callId, JSON.stringify(call.args));
                     yield toolCallEndEvent(callId);
 
-                    logger.info(`Server: Emitting activity snapshot for tool call ${call.name} (${callId})`);
+                    request.log.info(`Server: Emitting activity snapshot for tool call ${call.name} (${callId})`);
                     // Use ACTIVITY_SNAPSHOT to render the tool call bubble
                     yield activitySnapshotEvent(callId, "toolCall", {
                         name: call.name,
@@ -90,6 +95,7 @@ export async function* streamAgentResponse(
                     }
 
                     if (stateUpdated) {
+                        Object.assign(session.state, currentState);
                         yield stateSnapshotEvent(currentState);
                     }
 

@@ -28,7 +28,10 @@ vi.mock('@google/adk', () => ({
     InMemoryRunner: vi.fn(function (this: typeof mockRunnerInstance) {
         Object.assign(this, mockRunnerInstance);
         return this;
-    })
+    }),
+    LoggingPlugin: vi.fn(),
+    setLogLevel: vi.fn(),
+    LogLevel: { INFO: 'INFO' }
 }));
 
 vi.mock('./agents/agent', () => ({
@@ -72,9 +75,10 @@ describe('server.ts', () => {
         it('creates InMemoryRunner with orchestratorAgent', async () => {
             await import('./server.js');
 
-            expect(InMemoryRunner).toHaveBeenCalledWith({
-                agent: orchestratorAgent
-            });
+            expect(InMemoryRunner).toHaveBeenCalledWith(expect.objectContaining({
+                agent: orchestratorAgent,
+                plugins: expect.any(Array)
+            }));
         });
 
         it('creates Fastify instance with logger enabled', async () => {

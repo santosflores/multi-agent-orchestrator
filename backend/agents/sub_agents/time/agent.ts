@@ -82,5 +82,6 @@ export const currentTimeAgent = new LlmAgent({
     description: AGENT_DESCRIPTION,
     instruction: AGENT_INSTRUCTION,
     tools: [getCurrentTimeTool],
+    outputKey: 'time'
 });
 
