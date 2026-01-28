@@ -46,7 +46,7 @@ export async function* streamAgentResponse(
         session,
         event: createEvent({
             invocationId: runId,
-            author: runner.appName,
+            author: runner.agent.name,
             actions: {
                 stateDelta: currentState,
                 artifactDelta: {},
@@ -88,7 +88,7 @@ export async function* streamAgentResponse(
                             session,
                             event: createEvent({
                                 invocationId: runId,
-                                author: runner.appName,
+                                author: runner.agent.name,
                                 actions: {
                                     stateDelta: currentState,
                                     artifactDelta: {},
@@ -137,7 +137,7 @@ export async function* streamAgentResponse(
                             session,
                             event: createEvent({
                                 invocationId: runId,
-                                author: runner.appName,
+                                author: runner.agent.name,
                                 actions: {
                                     stateDelta: currentState,
                                     artifactDelta: {},
