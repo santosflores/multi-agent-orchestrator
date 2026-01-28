@@ -30,6 +30,7 @@ vi.mock('@google/adk', () => ({
         return this;
     }),
     LoggingPlugin: vi.fn(),
+    BasePlugin: class { },
     setLogLevel: vi.fn(),
     LogLevel: { INFO: 'INFO' }
 }));
