@@ -2,7 +2,7 @@ import 'dotenv/config';
 import Fastify from 'fastify';
 import { InMemoryRunner, LoggingPlugin, setLogLevel, LogLevel } from '@google/adk';
 import { orchestratorAgent } from './agents/agent';
-import { registerHomeRoute } from './routes/home';
+import { registerRoutes } from './routes';
 
 setLogLevel(LogLevel.INFO);
 
@@ -15,7 +15,7 @@ const fastify = Fastify({
     logger: true
 });
 
-registerHomeRoute(fastify, runner);
+registerRoutes(fastify, runner);
 
 const start = async () => {
     try {
