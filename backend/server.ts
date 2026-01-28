@@ -1,11 +1,14 @@
 import 'dotenv/config';
 import Fastify from 'fastify';
-import { InMemoryRunner } from '@google/adk';
+import { InMemoryRunner, LoggingPlugin, setLogLevel, LogLevel } from '@google/adk';
 import { orchestratorAgent } from './agents/agent';
 import { registerHomeRoute } from './routes/home';
 
+setLogLevel(LogLevel.INFO);
+
 const runner = new InMemoryRunner({
     agent: orchestratorAgent,
+    plugins: [new LoggingPlugin()],
 });
 
 const fastify = Fastify({
