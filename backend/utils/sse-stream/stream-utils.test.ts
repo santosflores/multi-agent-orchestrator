@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { streamAgentResponse } from './stream-utils';
 import { FastifyRequest } from 'fastify';
-import { FastifyRequest } from 'fastify';
-import { Event, stringifyContent, getFunctionCalls, getFunctionResponses, Session, InMemoryRunner } from '@google/adk';
+import { Event, stringifyContent, getFunctionCalls, getFunctionResponses, Session, InMemoryRunner, createEvent } from '@google/adk';
 
 // Mocks
 vi.mock('crypto', () => ({

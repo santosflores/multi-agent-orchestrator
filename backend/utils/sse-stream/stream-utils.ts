@@ -90,6 +90,7 @@ export async function* streamAgentResponse(
                                 }
                             })
                         });
+                        request.log.info({ state: currentState }, 'Server: Emitting updated state snapshot');
                         yield stateSnapshotEvent(currentState);
                     }
 
